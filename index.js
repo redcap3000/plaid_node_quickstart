@@ -411,38 +411,3 @@ app.post('/set_access_token', function(request, response, next) {
     }
   });
 });
-
-// This functionality is only relevant for the UK Payment Initiation product.
-// Sets the payment token in memory on the server side. We generate a new
-// payment token so that the developer is not required to supply one.
-// This makes the quickstart easier to use.
-app.post('/set_payment_token', function(request, response, next) {
-  client.createPaymentRecipient(
-    'Harry Potter',
-    'GB33BUKB20201555555555',
-    {street: ['4 Privet Drive'], city: 'Little Whinging', postal_code: '11111', country: 'GB'},
-  ).then(function(createPaymentRecipientResponse) {
-    let recipientId = createPaymentRecipientResponse.recipient_id;
-
-    return client.createPayment(
-      recipientId,
-      'payment_ref',
-      {currency: 'GBP', value: 12.34},
-    ).then(function(createPaymentResponse) {
-      let paymentId = createPaymentResponse.payment_id;
-
-      return client.createPaymentToken(
-        paymentId,
-      ).then(function(createPaymentTokenResponse) {
-        let paymentToken = createPaymentTokenResponse.payment_token;
-        PAYMENT_TOKEN = paymentToken;
-        PAYMENT_ID = paymentId;
-        return response.json({error: null, paymentToken: paymentToken});
-      })
-    })
-  }).catch(function(error) {
-    prettyPrintResponse(error);
-    return response.json({ error: error });
-  });
-
-});
