@@ -399,10 +399,16 @@ var respondWithAssetReport = (
 app.post('/set_access_token', function(request, response, next) {
   ACCESS_TOKEN = request.body.access_token;
   client.getItem(ACCESS_TOKEN, function(error, itemResponse) {
-    response.json({
-      item_id: itemResponse.item.item_id,
-      error: false,
-    });
+    if (error != null) {
+      return response.json({
+        error: error,
+      });
+    }else if(typeof itemResponse != 'undefined' && typeof itemResponse.item != 'undefined' && typeof itemResponse.item.item_id != 'undefined'){
+      response.json({
+        item_id: itemResponse.item.item_id,
+        error: false,
+      });
+    }
   });
 });
 
