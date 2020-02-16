@@ -116,22 +116,42 @@ app.post('/get_access_token', function(request, response, next) {
 // https://plaid.com/docs/#transactions
 app.get('/transactions', function(request, response, next) {
   // Pull transactions for the Item for the last 30 days
-  var startDate = moment().subtract(30, 'days').format('YYYY-MM-DD');
-  var endDate = moment().format('YYYY-MM-DD');
-  client.getTransactions(ACCESS_TOKEN, startDate, endDate, {
-    count: 250,
-    offset: 0,
-  }, function(error, transactionsResponse) {
-    if (error != null) {
-      prettyPrintResponse(error);
-      return response.json({
-        error: error
-      });
-    } else {
-      prettyPrintResponse(transactionsResponse);
-      response.json({error: null, transactions: transactionsResponse});
-    }
-  });
+  if(typeof request.query.startDate != 'undefined')
+  {
+    // check startDate to ensure its not two years before the current date 
+    // which is the api limit
+    // 'YYYY-MM-DD'
+    var startDate = moment(request.query.startDate).format('YYYY-MM-DD');
+  }else{
+    var startDate = moment().subtract(30, 'days').format('YYYY-MM-DD');
+
+  }
+  if(typeof request.query.endDate != 'undefined'){
+    // end date cannot be greater than today and must be greater than start date
+  }else{
+    var endDate = moment().format('YYYY-MM-DD');
+
+  }
+  if(typeof startDate != 'undefined' && startDate && typeof endDate != 'undefined' && endDate){
+    client.getTransactions(ACCESS_TOKEN, startDate, endDate, {
+      count: 250,
+      offset: 0,
+    }, function(error, transactionsResponse) {
+      if (error != null) {
+        prettyPrintResponse(error);
+        return response.json({
+          error: error
+        });
+      } else {
+        prettyPrintResponse(transactionsResponse);
+        response.json({error: null, transactions: transactionsResponse});
+      }
+    });
+  }else{
+    prettyPrintResponse({error: 'poorly formed date ' ,startDate : startDate,endDate:endDate });
+    response.json({error: 'poorly formed date ' ,startDate : startDate,endDate:endDate });
+  }
+
 });
 
 // Retrieve Identity for an Item
