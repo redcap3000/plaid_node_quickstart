@@ -294,3 +294,14 @@ Errors
   background-color:orange;
   color:red !IMPORTANT;
  }
+ 
+ /* cash in /out net */
+.cashIn{
+  color:green;
+}
+.cashOut{
+  color:red;
+}
+.cashNet{
+  color:black;
+}

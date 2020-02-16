@@ -13,13 +13,17 @@
     <div class="grid">
       <div class="grid__column grid__column--is-twelve-columns">
         <div id="banner" class="everpresent-content">
-          <h1 class="everpresent-content__heading">Plaid Quickstart</h1>
+          <h1 class="everpresent-content__heading">Account Summary</h1>
           <p id="intro" class="everpresent-content__subheading">
             An example application that outlines an end-to-end integration with Plaid
           </p>
-          <p id="steps" class="everpresent-content__subheading">
-           Success! You just created an Item by linking your account.
-          </p>
+         
+          <div id="cashIn" class="everpresent-content__subheading item-data-row__left cashIn">
+          </div>
+          <div id="cashOut" class="everpresent-content__subheading item-data-row__center cashOut">
+          </div>
+          <div id="cashNet" class="everpresent-content__subheadingitem-data-row__center cashNet">
+          </div>
         </div>
 
         <div id="container" class="initial-view">
@@ -453,6 +457,12 @@ function transactionCheckLoop(start)
             for(var cat in transactionCatsTitles){
                 transactionCatsTitles[cat] = (transactionCatsTitles[cat].every( (val, i, arr) => val === arr[0] ) ?transactionCatsTitles[cat][0] : transactionCatsTitles[cat])
             }
+            // vars for total cash in / cash out
+            // deposits
+            cashIn = 0
+            // withdrawl
+
+            cashOut = 0
             // group based on commas
             transactionGrouping= {}
             for(var cat in transactionCats){
@@ -466,12 +476,35 @@ function transactionCheckLoop(start)
               temp['type']= typeGrp
               temp['count'] = transactionCats[cat]
               temp['total'] = transactionCatsTotals[cat]
+              if(temp['total'] < 0){
+                cashIn += temp['total']
+              }else{
+                cashOut += temp['total']
+                
+              }
               temp['transactions'] = transactionCatsTitles[cat]
+
+
               transactionGrouping[actionGrp].push(temp)
             }
             console.log(transactionGrouping)
             // update dom
             //#transactionGrouping
+            document.getElementById('cashIn').innerHTML = ''
+
+            document.getElementById('cashIn').innerHTML = 'In<br/>$ ' + Math.abs(cashIn).toFixed(2)
+
+
+            document.getElementById('cashOut').innerHTML = ''
+
+
+            document.getElementById('cashOut').innerHTML = 'Out<br/>$ ' + cashOut.toFixed(2)
+
+
+            document.getElementById('cashNet').innerHTML = 'Net<br/>$ ' + (Math.abs(cashIn) - cashOut).toFixed(2)
+
+
+            
             document.getElementById('transactionGrouping').innerHTML=''
             for(var action in transactionGrouping){
               var grouping = transactionGrouping[action]
