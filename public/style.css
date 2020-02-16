@@ -271,3 +271,26 @@ Errors
   color: #a94442;
   font-weight: bold;
 }
+/*
+ My additions
+
+ PA TR SE are shorthand for common grouping
+ PA = PAYMENT
+ TR = TRANSFER
+ SE = SERVICE
+ */
+
+ .Pa {
+  background-color:lightgreen;
+  color:green !IMPORTANT;
+ }
+
+ .Tr {
+  background-color:purple;
+  color:magenta !IMPORTANT;
+ }
+
+ .Se {
+  background-color:orange;
+  color:red !IMPORTANT;
+ }

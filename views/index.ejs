@@ -427,15 +427,32 @@ function transactionCheckLoop(start)
             }
             // build common categories
             transactionCats={}
+            transactionCatsTotals={}
+            transactionCatsTitles={}
+            
             preFilterCollection.filter(function(t){
               var cat = t.category
               if(typeof transactionCats[cat] == 'undefined'){
                 transactionCats[cat] = 1
+                transactionCatsTotals[cat] = t.amount
+                transactionCatsTitles[cat] = []
+                transactionCatsTitles[cat].push(t.name)
               }else{
                 transactionCats[cat] += 1
+                transactionCatsTotals[cat] += t.amount
+                var idxChk = transactionCatsTitles[cat].indexOf(t.name)
+                // checking for duplicate transactions to modify the title name
+                // rather than more elements
+                  transactionCatsTitles[cat].push(t.name)
               }
+
+
             })
-            console.log(transactionCats)
+
+            // process duplicate transaction titles
+            for(var cat in transactionCatsTitles){
+                transactionCatsTitles[cat] = (transactionCatsTitles[cat].every( (val, i, arr) => val === arr[0] ) ?transactionCatsTitles[cat][0] : transactionCatsTitles[cat])
+            }
             // group based on commas
             transactionGrouping= {}
             for(var cat in transactionCats){
@@ -448,10 +465,9 @@ function transactionCheckLoop(start)
               var temp = {}
               temp['type']= typeGrp
               temp['count'] = transactionCats[cat]
-              transactionGrouping[actionGrp].push({
-                type : typeGrp,
-                count : transactionCats[cat]
-              })
+              temp['total'] = transactionCatsTotals[cat]
+              temp['transactions'] = transactionCatsTitles[cat]
+              transactionGrouping[actionGrp].push(temp)
             }
             console.log(transactionGrouping)
             // update dom
@@ -481,15 +497,19 @@ function transactionCheckLoop(start)
                 var type = grp.type
                 var count = grp.count
                 var div = document.createElement('div')
-                div.className = 'item-data-row__center'
+                div.className = 'item-data-row'
                 
                 var divLeft = document.createElement('div')
                 divLeft.className = 'item-data-row__left'
 
-                var divLeftAction = document.createElement('div')
-                divLeftAction.className = 'item-data-row__endpoint'
+              
+                
 
-                divLeftAction.innerHTML = action
+
+                var divLeftAction = document.createElement('div')
+                divLeftAction.className = 'item-data-row__request-type ' + action[0]+action[1]
+
+                divLeftAction.innerHTML = action[0]+action[1]
 
                 divLeft.appendChild(divLeftAction)
                 //div.innerHTML = type + ' : ' + count
@@ -498,22 +518,35 @@ function transactionCheckLoop(start)
                 divCenter.className = 'item-data-row__center'
 
                 //request-type
-                var groupingLeftRowDiv = document.createElement('div')
-                groupingLeftRowDiv.className = 'item-data-row__nicename'
-                groupingLeftRowDiv.innerHTML = type
+                var groupingType = document.createElement('div')
+                groupingType.className = 'item-data-row__nicename'
+                groupingType.innerHTML = type
 
+                divCenter.appendChild(groupingType)
+                
+                var groupTransactionTitle = document.createElement('div')
+                groupTransactionTitle.className = 'item-data-row__description'
+                groupTransactionTitle.innerHTML = grp.transactions
 
+                divCenter.appendChild(groupTransactionTitle)
+              
                 var divRight = document.createElement('div')
                 divRight.className = 'item-data-row__right'
 
-                divCenter.appendChild(groupingLeftRowDiv)
 
-                var groupingRightRowDiv = document.createElement('div')
-                groupingRightRowDiv.className = 'item-data-row__endpoint'
-                groupingRightRowDiv.innerHTML = count
+              
 
-                divRight.appendChild(groupingRightRowDiv)
+                var dollarAmount = document.createElement('div')
+                dollarAmount.className = 'item-data-row__request-type'
+                dollarAmount.innerHTML = grp.total
                 
+                divRight.appendChild(dollarAmount)
+                
+                var groupCount = document.createElement('div')
+                groupCount.className = 'item-data-row__request-type ' 
+                groupCount.innerHTML = count
+
+                divLeft.appendChild(groupCount)
                 //divCenter.appendChild(groupingLeftRowDiv)
                 div.appendChild(divLeft)
                 div.appendChild(divCenter)
