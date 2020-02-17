@@ -141,18 +141,18 @@ app.get('/transactions', function(request, response, next) {
   // Pull transactions for the Item for the last 30 days
   if(typeof request.query.startDate != 'undefined')
   {
-      console.log(request.query.startDate)
-      console.log(request.query.endDate)
+     
 
     // check startDate to ensure its not two years before the current date 
     // which is the api limit
     // 'YYYY-MM-DD'
-    var startDate = moment(request.query.startDate).format('YYYY-MM-DD');
+    var startDate =request.query.startDate;
   }else{
     var startDate = moment().subtract(30, 'days').format('YYYY-MM-DD');
 
   }
   if(typeof request.query.endDate != 'undefined'){
+    var endDate = request.query.endDate;
     // end date cannot be greater than today and must be greater than start date
   }else{
     // month to end

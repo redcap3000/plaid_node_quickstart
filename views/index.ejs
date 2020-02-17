@@ -53,7 +53,7 @@
               <div class="item-data-row__center">
                 <div class="item-data-row__nicename">Transactions</div>
                 <div class="item-data-row__endpoint">/transactions/get</div>
-                <div class="item-data-row__description">Retrieve transactions for credit and depository accounts.</div>
+                <div class="item-data-row__description">Retrieve transactions for this month.</div>
               </div>
               <div class="item-data-row__right">
                 <button id="get-transactions-btn" class="button button--is-small button--is-default button--is-full-width">Send request</button>
@@ -62,7 +62,23 @@
                 <table><tbody id="get-transactions-data"></tbody></table>
               </div>
             </div>
-
+        <!--Transactions2 -->
+            <div class="item-data-row">
+              <div class="item-data-row__left">
+                <div class="item-data-row__request-type">post</div>
+              </div>
+              <div class="item-data-row__center">
+                <div class="item-data-row__nicename">Transactions 2</div>
+                <div class="item-data-row__endpoint">/transactions/get</div>
+                <div class="item-data-row__description">Retrieve transactions for the previous month.</div>
+              </div>
+              <div class="item-data-row__right">
+                <button id="get-transactions2-btn" class="button button--is-small button--is-default button--is-full-width">Send request</button>
+              </div>
+              <div class="item-data-row__response">
+                <table><tbody id="get-transactions2-data"></tbody></table>
+              </div>
+            </div>
             <!-- Identity -->
             <div class="item-data-row">
               <div class="item-data-row__left">
@@ -112,6 +128,7 @@
   (function($) {
     // global vars for reference elsewhere (eventually depreciating JQUERY BS)
     transactionData=true
+    transactionData2=true
     // Handles redirect from the oauth response page for the oauth flow.
     if (document.referrer != null && document.referrer.includes('http://localhost:8000/oauth-response.html')) {
       $('#container').fadeOut('fast', function() {
@@ -337,7 +354,60 @@
         }
       });
     });
+    /*
 
+      /*
+        TRANSACTIONS - this month vs. last month
+    */
+    $('#get-transactions2-btn').on('click', function(e) {
+      var dates = getDateRange()
+      console.log(dates[1])
+      if(typeof dates == 'undefined' || !dates){
+        return false
+      }
+      $.get('/transactions?startDate='+dates[1][0].format('YYYY-MM-DD')+'&endDate='+dates[1][1].format('YYYY-MM-DD'), function(data) {
+        transactionData2 = data
+        if (data.error != null && data.error.error_code != null) {
+          // Format the error
+          var errorHtml = '<div class="inner"><p>' +
+           '<strong>' + data.error.error_code + ':</strong> ' +
+           (data.error.display_message == null ? data.error.error_message : data.error.display_message)  + '</p></div>';
+
+          if (data.error.error_code === 'PRODUCT_NOT_READY') {
+            // Add additional context for `PRODUCT_NOT_READY` errors
+            errorHtml += '<div class="inner"><p>Note: The PRODUCT_NOT_READY ' +
+             'error is returned when a request to retrieve Transaction data ' +
+             'is made before Plaid finishes the <a href="https://plaid.com/' +
+             'docs/quickstart/#transaction-data-with-webhooks">initial ' +
+             'transaction pull.</a></p></div>';
+          }
+          // Render the error
+          $('#get-transactions2-data').slideUp(function() {
+            $(this).slideUp(function() {
+              $(this).html(errorHtml).slideDown();
+            });
+          });
+        } else {
+          $('#get-transactions2-data').slideUp(function() {
+            var html = '<tr><td><strong>Name</strong></td><td><strong>Amount</strong></td><td><strong>Date</strong></td></tr>';
+            data.transactions.transactions.forEach(function(txn, idx) {
+              html += '<tr>';
+              html += '<td>' + txn.name + '</td>';
+              html += '<td>$' + txn.amount + '</td>';
+              html += '<td>' + txn.date + '</td>';
+              html += '</tr>';
+            });
+
+            $(this).slideUp(function() {
+              $(this).html(html).slideDown();
+            });
+          });
+        }
+      });
+    });
+
+
+  
     $('#get-balance-btn').on('click', function(e) {
       $.get('/balance', function(data) {
         $('#get-balance-data').slideUp(function() {
@@ -381,6 +451,12 @@ function displayError(element, error) {
   $(element).html(html).slideDown();
 }
 
+function buildDiv(className,inner){
+    var d = document.createElement('div')
+    d.className = className
+    d.innerHTML = (typeof inner != 'undefined' ? inner:'')
+    return d
+}
 
 function getDateRange(len,date){
   // give date and length (month,year,week ?)
@@ -413,6 +489,26 @@ function tfCompare(){
   // callbacks update variables
 
 }
+function transactionCompare(){
+    
+    if(typeof transactionData2 != 'undefined'){
+      // transform.
+      if(transactionData2.error == null){
+        if(typeof transactionData2.transactions != 'undefined'){
+          if(typeof transactionData2.transactions.transactions != 'undefined'){
+            if(typeof transactionData != 'undefined' && typeof transactionData.transactions){
+              // being mega conservative here...
+
+            }
+          }
+        }
+      }
+    }
+}
+// for filtering transactions
+fieldFilter = ['category','date','name','amount','payment_channel','pending']
+
+
 function transactionCheckLoop(start)
 {
   console.log('transactionCheckLoop ' + start)
@@ -426,7 +522,7 @@ function transactionCheckLoop(start)
             var trxCollection = transactionData.transactions.transactions
             var preFilterCollection = []
             if(trxCollection.length > 0){
-              var fieldFilter = ['category','date','name','amount','payment_channel','pending']
+            
               trxCollection.filter(function(trx){
                 var preFilter = {}
                 for(var field in trx){
@@ -511,12 +607,7 @@ function transactionCheckLoop(start)
             document.getElementById('cashNet').innerHTML = 'Net<br/>$ ' + (Math.abs(cashIn) - cashOut).toFixed(2)
             
             document.getElementById('transactionGrouping').innerHTML=''
-            function buildDiv(className,inner){
-                var d = document.createElement('div')
-                d.className = className
-                d.innerHTML = (typeof inner != 'undefined' ? inner:'')
-                return d
-            }
+        
             for(var action in transactionGrouping){
               transactionGrouping[action].filter(function(grp){
                 var div = buildDiv('item-data-row')
