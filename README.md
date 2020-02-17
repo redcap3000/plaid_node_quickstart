@@ -2,6 +2,19 @@
 
 To run this application locally, first install it and then run either of the flows described below. Additionally, please also refer to the [Quickstart guide](https://plaid.com/docs/quickstart).
 
+
+## Why
+
+I wanted to get comfortable with Plaid for use with a small project with limited users (less than 10.) The quickstart has a lot, but the front end is too jquery for my tastes. The backend is missing a few calls, such as refreshToken and is probably a little too mouthy about enviornment variables.
+
+## Modifications
+
+refreshToken - invalidates and returns new token (mostly for testing purposes at this moment)
+
+## Plans
+
+Minimize jquery code, advanced visualizations, ability to send date parameters for applicable products. Coinbase-pro api integration
+
 ## Installing the quickstart app
 ``` bash
 git clone https://github.com/plaid/quickstart.git
