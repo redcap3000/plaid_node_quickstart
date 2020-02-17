@@ -1,8 +1,44 @@
 'use strict';
 
+/* specifically for coinbase-pro */
 var util = require('util');
-
 var envvar = require('envvar');
+/* 
+  create coinbase.json with api connection credentials 
+  store in root
+  
+  ** gets wallet balances
+    cbpro.wallets()
+  ** gets current orders
+    cbpro.orders()
+  ** cancel order
+    cbpro.cbCancelOrder(orderId<string>?)
+  ** deposit USD to BANK (only works for USD, not USDT,USDC.)
+    cbpro.depositUSD(amount<float>)
+  ** sell crypto
+    cbpro.sell({
+      product_id : <string>,
+      price : <float>,
+      amount : <float>
+    })
+  ** buy crypto (did some float to string conversion in placeOrder for whatever reason...)
+    cbpro.buy({
+      product_id : <string>,
+      price : <float>,
+      amount : <float>
+    })
+  ** cbLoopFunction - checks orders/wallets on an interval, in ideal implementation also handles
+      basic automated trade matching. Call using setTimeout externally or as needed to refresh internal variables
+      coinbase.json
+  {
+    "cbproKey":"YOUR KEY",
+    "cbproSecret":"YOUR SECRET",
+    "cbproPass":"YOUR PASS"
+  }
+
+*/
+var cbpro = require('./coinbase.js')
+
 var express = require('express');
 var bodyParser = require('body-parser');
 var moment = require('moment');
@@ -64,6 +100,19 @@ app.use(bodyParser.urlencoded({
 }));
 app.use(bodyParser.json());
 
+// init cb data
+cbpro.cbLoopFunction()
+// every 15 seconds probably let user define interval
+setInterval(function(){
+  cbpro.cbLoopFunction()
+},15000)
+
+app.get('/cbpro-wallets',function(request, response, next){
+  if(typeof cbpro != 'undefined' && typeof cbpro.wallets == 'function'){
+   // could filter out id here for 'security' rematch against server, detect change in id
+   response.json({error: null, wallets: cbpro.wallets()});
+  }
+})
 app.get('/', function(request, response, next) {
 
   if(typeof request.query.startDate != 'undefined')
@@ -75,7 +124,6 @@ app.get('/', function(request, response, next) {
     // which is the api limit
     // 'YYYY-MM-DD'
     var startDate = moment(request.query.startDate).format('YYYY-MM-DD');
-    console.log(startDate)
   }else{
     var startDate = moment().subtract(30, 'days').format('YYYY-MM-DD');
 
@@ -85,7 +133,6 @@ app.get('/', function(request, response, next) {
   }else{
     // month to end
     var endDate = moment().format('YYYY-MM-DD');
-    console.log(endDate)
   }
 
   response.render('index.ejs', {

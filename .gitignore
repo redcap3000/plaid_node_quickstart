@@ -4,4 +4,5 @@ npm-debug.log
 /*.env
 quickStart.sh
 credentials.json
+coinbase.json
 token.json
