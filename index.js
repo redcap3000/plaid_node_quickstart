@@ -65,6 +65,29 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json());
 
 app.get('/', function(request, response, next) {
+
+  if(typeof request.query.startDate != 'undefined')
+  {
+      console.log(request.query.startDate)
+      console.log(request.query.endDate)
+
+    // check startDate to ensure its not two years before the current date 
+    // which is the api limit
+    // 'YYYY-MM-DD'
+    var startDate = moment(request.query.startDate).format('YYYY-MM-DD');
+    console.log(startDate)
+  }else{
+    var startDate = moment().subtract(30, 'days').format('YYYY-MM-DD');
+
+  }
+  if(typeof request.query.endDate != 'undefined'){
+    // end date cannot be greater than today and must be greater than start date
+  }else{
+    // month to end
+    var endDate = moment().format('YYYY-MM-DD');
+    console.log(endDate)
+  }
+
   response.render('index.ejs', {
     PLAID_PUBLIC_KEY: PLAID_PUBLIC_KEY,
     PLAID_ENV: PLAID_ENV,
@@ -118,6 +141,9 @@ app.get('/transactions', function(request, response, next) {
   // Pull transactions for the Item for the last 30 days
   if(typeof request.query.startDate != 'undefined')
   {
+      console.log(request.query.startDate)
+      console.log(request.query.endDate)
+
     // check startDate to ensure its not two years before the current date 
     // which is the api limit
     // 'YYYY-MM-DD'
@@ -129,6 +155,7 @@ app.get('/transactions', function(request, response, next) {
   if(typeof request.query.endDate != 'undefined'){
     // end date cannot be greater than today and must be greater than start date
   }else{
+    // month to end
     var endDate = moment().format('YYYY-MM-DD');
 
   }
@@ -245,81 +272,6 @@ app.get('/holdings', function(request, response, next) {
   });
 });
 
-// Retrieve Investment Transactions for an Item
-// https://plaid.com/docs/#investments
-app.get('/investment_transactions', function(request, response, next) {
-  var startDate = moment().subtract(30, 'days').format('YYYY-MM-DD');
-  var endDate = moment().format('YYYY-MM-DD');
-  client.getInvestmentTransactions(ACCESS_TOKEN, startDate, endDate, function(error, investmentTransactionsResponse) {
-    if (error != null) {
-      prettyPrintResponse(error);
-      return response.json({
-        error: error,
-      });
-    }
-    prettyPrintResponse(investmentTransactionsResponse);
-    response.json({error: null, investment_transactions: investmentTransactionsResponse});
-  });
-});
-
-// Create and then retrieve an Asset Report for one or more Items. Note that an
-// Asset Report can contain up to 100 items, but for simplicity we're only
-// including one Item here.
-// https://plaid.com/docs/#assets
-app.get('/assets', function(request, response, next) {
-  // You can specify up to two years of transaction history for an Asset
-  // Report.
-  var daysRequested = 10;
-
-  // The `options` object allows you to specify a webhook for Asset Report
-  // generation, as well as information that you want included in the Asset
-  // Report. All fields are optional.
-  var options = {
-    client_report_id: 'Custom Report ID #123',
-    // webhook: 'https://your-domain.tld/plaid-webhook',
-    user: {
-      client_user_id: 'Custom User ID #456',
-      first_name: 'Alice',
-      middle_name: 'Bobcat',
-      last_name: 'Cranberry',
-      ssn: '123-45-6789',
-      phone_number: '555-123-4567',
-      email: 'alice@example.com',
-    },
-  };
-  client.createAssetReport(
-    [ACCESS_TOKEN],
-    daysRequested,
-    options,
-    function(error, assetReportCreateResponse) {
-      if (error != null) {
-        prettyPrintResponse(error);
-        return response.json({
-          error: error,
-        });
-      }
-      prettyPrintResponse(assetReportCreateResponse);
-
-      var assetReportToken = assetReportCreateResponse.asset_report_token;
-      respondWithAssetReport(20, assetReportToken, client, response);
-    });
-});
-
-// This functionality is only relevant for the UK Payment Initiation product.
-// Retrieve Payment for a specified Payment ID
-app.get('/payment_get', function(request, response, next) {
-  client.getPayment(PAYMENT_ID, function(error, paymentGetResponse) {
-    if (error != null) {
-      prettyPrintResponse(error);
-      return response.json({
-        error: error,
-      });
-    }
-    prettyPrintResponse(paymentGetResponse);
-    response.json({error: null, payment: paymentGetResponse});
-  });
-});
-
 // Retrieve information about an Item
 // https://plaid.com/docs/#retrieve-item
 app.get('/item', function(request, response, next) {
@@ -363,58 +315,6 @@ var prettyPrintResponse = response => {
 // then send it in the response to the client. Alternatively, you can provide a
 // webhook in the `options` object in your `/asset_report/create` request to be
 // notified when the Asset Report is finished being generated.
-var respondWithAssetReport = (
-  numRetriesRemaining,
-  assetReportToken,
-  client,
-  response
-) => {
-  if (numRetriesRemaining == 0) {
-    return response.json({
-      error: 'Timed out when polling for Asset Report',
-    });
-  }
-
-  var includeInsights = false;
-  client.getAssetReport(
-    assetReportToken,
-    includeInsights,
-    function(error, assetReportGetResponse) {
-      if (error != null) {
-        prettyPrintResponse(error);
-        if (error.error_code == 'PRODUCT_NOT_READY') {
-          setTimeout(
-            () => respondWithAssetReport(
-              --numRetriesRemaining, assetReportToken, client, response),
-            1000
-          );
-          return
-        }
-
-        return response.json({
-          error: error,
-        });
-      }
-
-      client.getAssetReportPdf(
-        assetReportToken,
-        function(error, assetReportGetPdfResponse) {
-          if (error != null) {
-            return response.json({
-              error: error,
-            });
-          }
-
-          response.json({
-            error: null,
-            json: assetReportGetResponse.report,
-            pdf: assetReportGetPdfResponse.buffer.toString('base64'),
-          })
-        }
-      );
-    }
-  );
-};
 
 app.post('/set_access_token', function(request, response, next) {
   ACCESS_TOKEN = request.body.access_token;

@@ -406,6 +406,13 @@ function getDateRange(len,date){
 
 }
 
+// timeframe compare compares this week vs last week, this month vs last month, this year vs last year
+function tfCompare(){
+  // create two variables for loop to listen for both variables to be valid
+  // get dates, issue two api calls, wait for response for both and mark variable as pending
+  // callbacks update variables
+
+}
 function transactionCheckLoop(start)
 {
   console.log('transactionCheckLoop ' + start)
@@ -414,16 +421,7 @@ function transactionCheckLoop(start)
       // transform.
       if(transactionData.error == null){
         if(typeof transactionData.transactions != 'undefined'){
-          // update dom here
-          /*
-          transactions.transactions.forEach(function(txn, idx) {
-              html += '<tr>';
-              html += '<td>' + txn.name + '</td>';
-              html += '<td>$' + txn.amount + '</td>';
-              html += '<td>' + txn.date + '</td>';
-              html += '</tr>';
-            });
-          */
+         
           if(typeof transactionData.transactions.transactions != 'undefined'){
             var trxCollection = transactionData.transactions.transactions
             var preFilterCollection = []
@@ -470,8 +468,6 @@ function transactionCheckLoop(start)
                 // rather than more elements
                   transactionCatsTitles[cat].push(t.name)
               }
-
-
             })
 
             // process duplicate transaction titles
@@ -482,7 +478,6 @@ function transactionCheckLoop(start)
             // deposits
             cashIn = 0
             // withdrawl
-
             cashOut = 0
             // group based on commas
             transactionGrouping= {}
@@ -504,13 +499,11 @@ function transactionCheckLoop(start)
                 
               }
               temp['transactions'] = transactionCatsTitles[cat]
-
-
               transactionGrouping[actionGrp].push(temp)
+              // should i do the dom updating here?
             }
-            console.log(transactionGrouping)
             // update dom
-            //#transactionGrouping
+            // needs improvement ... 
             document.getElementById('cashIn').innerHTML = ''
             document.getElementById('cashIn').innerHTML = 'In<br/>$ ' + Math.abs(cashIn).toFixed(2)
             document.getElementById('cashOut').innerHTML = ''
@@ -518,86 +511,49 @@ function transactionCheckLoop(start)
             document.getElementById('cashNet').innerHTML = 'Net<br/>$ ' + (Math.abs(cashIn) - cashOut).toFixed(2)
             
             document.getElementById('transactionGrouping').innerHTML=''
+            function buildDiv(className,inner){
+                var d = document.createElement('div')
+                d.className = className
+                d.innerHTML = (typeof inner != 'undefined' ? inner:'')
+                return d
+            }
             for(var action in transactionGrouping){
-              var grouping = transactionGrouping[action]
-              //var groupingDiv = document.createElement('div')
-              //groupingDiv.className = 'item-data-row__cente'
-              
-
-              /*
-
-               <div class="item-data-row__center">
-                <div class="item-data-row__nicename">Transactions</div>
-                <div class="item-data-row__endpoint">/transactions/get</div>
-                <div class="item-data-row__description">Retrieve transactions for credit and depository accounts.</div>
-              </div>
-
-              */
-
-              //groupingDiv.innerHTML = action
-              //document.getElementById('transactionGrouping').appendChild(groupingDiv)
-              // item-data-row__left
-              
-              grouping.filter(function(grp){
-                var type = grp.type
-                var count = grp.count
-                var div = document.createElement('div')
-                div.className = 'item-data-row'
-                
-                var divLeft = document.createElement('div')
-                divLeft.className = 'item-data-row__left'
-
-              
-
-                var divLeftAction = document.createElement('div')
-                divLeftAction.className = 'item-data-row__request-type ' + action[0]+action[1]
-
-                divLeftAction.innerHTML = action[0]+action[1]
+              transactionGrouping[action].filter(function(grp){
+                var div = buildDiv('item-data-row')
+                var divLeft = buildDiv('item-data-row__left')
+                divLeft.appendChild(
+                  // group count
+                    buildDiv('item-data-row__request-type ',grp.count)
+                )
+                var divLeftAction = buildDiv('item-data-row__request-type ' + action[0]+action[1],action[0]+action[1])
 
                 divLeft.appendChild(divLeftAction)
-                //div.innerHTML = type + ' : ' + count
                 
-                var divCenter = document.createElement('div')
-                divCenter.className = 'item-data-row__center'
-
-                //request-type
-                var groupingType = document.createElement('div')
-                groupingType.className = 'item-data-row__nicename'
-                groupingType.innerHTML = type
-
-                divCenter.appendChild(groupingType)
-                
-                var groupTransactionTitle = document.createElement('div')
-                groupTransactionTitle.className = 'item-data-row__description'
-                groupTransactionTitle.innerHTML = grp.transactions
-
-                divCenter.appendChild(groupTransactionTitle)
-              
-                var divRight = document.createElement('div')
-                divRight.className = 'item-data-row__right'
-
-                var dollarAmount = document.createElement('div')
-                dollarAmount.className = 'item-data-row__request-type'
-                dollarAmount.innerHTML = grp.total
-                
-                divRight.appendChild(dollarAmount)
-                
-                var groupCount = document.createElement('div')
-                groupCount.className = 'item-data-row__request-type ' 
-                groupCount.innerHTML = count
-
-                divLeft.appendChild(groupCount)
-                //divCenter.appendChild(groupingLeftRowDiv)
                 div.appendChild(divLeft)
+
+                var divCenter = buildDiv('item-data-row__center')
+
+                // grouping type                
+                divCenter.appendChild(buildDiv('item-data-row__nicename',grp.type))
+                
+               // group title/transactions
+                divCenter.appendChild(
+                  buildDiv('item-data-row__description',grp.transactions)
+                )
+
                 div.appendChild(divCenter)
 
+                var divRight = buildDiv('item-data-row__right')
+                // dollar amount
+                divRight.appendChild(
+                  buildDiv('item-data-row__request-type',grp.total)
+                )
+             
                 div.appendChild(divRight)
                 
                 document.getElementById('transactionGrouping').appendChild(div)
               })
             }
-              
-
           }
           return clearInterval(transactionInterval)
         }
