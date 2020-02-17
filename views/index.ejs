@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Plaid Quickstart Example</title>
 <link rel="stylesheet" href="https://threads.plaid.com/threads.css">
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
 <link rel="stylesheet" type="text/css" href="style.css">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
@@ -382,9 +382,30 @@ function displayError(element, error) {
 }
 
 
-// to check for available 'transactions' in a global var 
-// forcing restart restarts the interval and will probably *should* reapply the transformations
-transactionInterval = false
+function getDateRange(len,date){
+  // give date and length (month,year,week ?)
+  if(typeof len == 'undefined'){
+    // default to month
+    len = 'month'
+  }
+  if(typeof date == 'undefined'){
+    date = moment()
+  }
+  var startOf = moment(date).startOf(len)
+  
+  var endOf = moment(startOf).endOf(len)
+
+  var startOfLast = moment(startOf).subtract(1,len).startOf(len)
+
+  var endOfLast = moment(startOfLast).endOf(len)
+  
+  return [
+    [startOf,endOf],
+    [startOfLast,endOfLast]
+  ]
+
+}
+
 function transactionCheckLoop(start)
 {
   console.log('transactionCheckLoop ' + start)
@@ -491,19 +512,10 @@ function transactionCheckLoop(start)
             // update dom
             //#transactionGrouping
             document.getElementById('cashIn').innerHTML = ''
-
             document.getElementById('cashIn').innerHTML = 'In<br/>$ ' + Math.abs(cashIn).toFixed(2)
-
-
             document.getElementById('cashOut').innerHTML = ''
-
-
             document.getElementById('cashOut').innerHTML = 'Out<br/>$ ' + cashOut.toFixed(2)
-
-
             document.getElementById('cashNet').innerHTML = 'Net<br/>$ ' + (Math.abs(cashIn) - cashOut).toFixed(2)
-
-
             
             document.getElementById('transactionGrouping').innerHTML=''
             for(var action in transactionGrouping){
@@ -536,8 +548,6 @@ function transactionCheckLoop(start)
                 divLeft.className = 'item-data-row__left'
 
               
-                
-
 
                 var divLeftAction = document.createElement('div')
                 divLeftAction.className = 'item-data-row__request-type ' + action[0]+action[1]
@@ -565,9 +575,6 @@ function transactionCheckLoop(start)
               
                 var divRight = document.createElement('div')
                 divRight.className = 'item-data-row__right'
-
-
-              
 
                 var dollarAmount = document.createElement('div')
                 dollarAmount.className = 'item-data-row__request-type'
