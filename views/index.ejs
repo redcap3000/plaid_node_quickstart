@@ -146,6 +146,13 @@
     // global vars for reference elsewhere (eventually depreciating JQUERY BS)
     transactionData=true
     transactionData2=true
+
+    // for comparisons
+
+    thisR = false
+    lastR = false
+    twoRAgo = false
+
     // Handles redirect from the oauth response page for the oauth flow.
     if (document.referrer != null && document.referrer.includes('http://localhost:8000/oauth-response.html')) {
       $('#container').fadeOut('fast', function() {
@@ -507,6 +514,72 @@ function buildDiv(className,inner){
     return d
 }
 
+function dateAnalysis(range){
+/* use to get date ranges for comparisons
+   returns current range,range before, and range - 2
+    ex : this year,last year and year before
+       : this month, last month and month before
+*/
+  if(typeof range == 'undefined'){
+    range = 'years'
+  }else if(range != 'months' && range != 'weeks' && range != 'days'){
+    console.log("invalid range")
+    return false
+  } 
+  var t = getDateRange(range,moment())
+
+  var thisR = t[0]
+  var lastR = t[1]
+
+  t = getDateRange(range,lastR[0])
+
+  var twoRAgo = t[1]
+    
+  console.table(thisR)
+  console.table(lastR)
+  console.table(twoRAgo)
+  return [
+    thisR,
+    lastR,
+    twoRAgo
+  ]
+  // compare [thisYear,lastYear]
+  //           [thisYear,twoYearsAgo]
+}
+
+transactionComparisons={}
+function fetchCompareTransactions(range){
+  var thisR = range[0]
+  var lastR = range[1]
+  var twoRAgo = range[2]
+
+ $.get('/transactions?startDate='+thisR[0].format('YYYY-MM-DD')+'&endDate='+thisR[1].format('YYYY-MM-DD'), function(firstSet) {
+        // thisR
+       tfCompare(firstSet,thisR)
+                  
+
+        $.get('/transactions?startDate='+lastR[0].format('YYYY-MM-DD')+'&endDate='+lastR[1].format('YYYY-MM-DD'), function(midSet){
+          // lastR
+            tfCompare(midSet,lastR)
+
+            $.get('/transactions?startDate='+twoRAgo[0].format('YYYY-MM-DD')+'&endDate='+twoRAgo[1].format('YYYY-MM-DD'),
+              function(endSet){
+                /*
+                  DO THINGS HERE
+                */
+                tfCompare(endSet,twoRAgo)
+                
+                
+
+              })
+          })
+
+     })  
+}
+
+
+fetchCompareTransactions(dateAnalysis('months'))
+
 function getDateRange(len,date){
   // give date and length (month,year,week ?)
   if(typeof len == 'undefined'){
@@ -532,10 +605,135 @@ function getDateRange(len,date){
 }
 
 // timeframe compare compares this week vs last week, this month vs last month, this year vs last year
-function tfCompare(){
-  // create two variables for loop to listen for both variables to be valid
-  // get dates, issue two api calls, wait for response for both and mark variable as pending
-  // callbacks update variables
+function tfCompare(transactionData,tf){
+ console.log(transactionData)
+  var trxCollection = transactionData.transactions.transactions
+  var preFilterCollection = []
+  if(trxCollection.length > 0){
+  
+    trxCollection.filter(function(trx){
+      var preFilter = {}
+      for(var field in trx){
+        if(fieldFilter.indexOf(field) > -1){
+          preFilter[field]=true
+          if(field == 'name'){
+            // text transformation
+            preFilter[field] = trx[field].split(' ')
+               .map(w => w[0].toUpperCase() + w.substr(1).toLowerCase())
+               .join(' ')
+          }else if(field == 'category'){
+            preFilter[field] = trx[field].join(',')
+
+          }else{
+            preFilter[field] = trx[field]
+          }
+        }
+      }
+      preFilterCollection.push(preFilter)
+    })
+  }
+
+   // build common categories
+    var transactionCats={}
+    var transactionCatsTotals={}
+    var transactionCatsTitles={}
+    
+    preFilterCollection.filter(function(t){
+      var cat = t.category
+      if(typeof transactionCats[cat] == 'undefined'){
+        transactionCats[cat] = 1
+        transactionCatsTotals[cat] = t.amount
+        transactionCatsTitles[cat] = []
+        transactionCatsTitles[cat].push(t.name)
+      }else{
+        transactionCats[cat] += 1
+        transactionCatsTotals[cat] += t.amount
+        var idxChk = transactionCatsTitles[cat].indexOf(t.name)
+        // checking for duplicate transactions to modify the title name
+        // rather than more elements
+          transactionCatsTitles[cat].push(t.name)
+      }
+    })
+
+    // process duplicate transaction titles
+    for(var cat in transactionCatsTitles){
+        transactionCatsTitles[cat] = (transactionCatsTitles[cat].every( (val, i, arr) => val === arr[0] ) ?transactionCatsTitles[cat][0] : transactionCatsTitles[cat])
+    }
+
+
+    // vars for total cash in / cash out
+    // deposits
+    var cashIn = 0
+    // withdrawl
+    var cashOut = 0
+    // group based on commas
+    transactionGrouping= {}
+    for(var cat in transactionCats){
+      var cats = cat.split(',')
+      var actionGrp = cats[0]
+      var typeGrp = cats[1]
+      if(typeof transactionGrouping[actionGrp] == 'undefined'){
+        transactionGrouping[actionGrp] = []
+      }
+      var temp = {}
+      temp['type']= typeGrp
+      temp['count'] = transactionCats[cat]
+      temp['total'] = transactionCatsTotals[cat]
+      if(temp['total'] < 0){
+        cashIn += temp['total']
+      }else{
+        cashOut += temp['total']
+        
+      }
+      temp['transactions'] = transactionCatsTitles[cat]
+      transactionGrouping[actionGrp].push(temp)
+      // should i do the dom updating here?
+    }
+     var div = buildDiv('item-data-row')
+     // cash in cash net plus date range of record summary
+     //div.appendChild(buildDiv('item-data-row__left cashIn',Math.abs(cashIn)))
+     
+     var leftDiv = buildDiv('item-data-row__left')
+     leftDiv.appendChild(buildDiv('item-data-row__nicename cashOut',cashOut + '&nbsp;'))
+     
+     leftDiv.appendChild(buildDiv('item-data-row__nicename cashIn',Math.abs(cashIn)))
+      
+      div.appendChild(leftDiv)
+     
+     div.appendChild(buildDiv('item-data-row__center',tf[0].format('MM-DD-YY') + ' to ' + tf[1].format('MM-DD-YY') ))
+     div.appendChild(buildDiv('item-data-row__left cashNet',(cashOut-Math.abs(cashIn)).toFixed(2)))
+
+     document.body.appendChild(div)
+
+     for(var action in transactionGrouping){
+              transactionGrouping[action].filter(function(grp){
+                var div = buildDiv('item-data-row')
+                var divLeft = buildDiv('item-data-row__left')
+                divLeft.appendChild(
+                  // group count
+                    buildDiv('item-data-row__request-type ',grp.count)
+                )
+                var divLeftAction = buildDiv('item-data-row__request-type ' + action[0]+action[1],action[0]+action[1])
+                divLeft.appendChild(divLeftAction)
+                div.appendChild(divLeft)
+                var divCenter = buildDiv('item-data-row__center')
+                // grouping type                
+                divCenter.appendChild(buildDiv('item-data-row__nicename',grp.type))
+                
+               // group title/transactions
+                divCenter.appendChild(
+                  buildDiv('item-data-row__description',grp.transactions)
+                )
+                div.appendChild(divCenter)
+                var divRight = buildDiv('item-data-row__right')
+                // dollar amount
+                divRight.appendChild(
+                  buildDiv('item-data-row__request-type',grp.total)
+                )
+                div.appendChild(divRight)
+                document.body.appendChild(div)
+              })
+            }
 
 }
 function transactionCompare(){
