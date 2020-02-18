@@ -217,7 +217,54 @@ app.get('/transactions', function(request, response, next) {
           error: error
         });
       } else {
-        prettyPrintResponse(transactionsResponse);
+        //var responseRows = []
+        var nullChk = function(n){
+         return (n == null ||  
+                n == undefined || 
+                n.length == 0 ? true : false)
+          
+        }
+        var filtered = transactionsResponse.transactions.map(function(t){
+          var r= {}
+
+          for(var field in t){
+            var val = t[field]
+            // catch flat fields or arrays
+            if(((typeof val == 'number' || typeof val == 'string') && !nullChk(val))){
+              r[field] = undefined
+              r[field] = val
+            }else if(val != {} && val && val.length > 0){
+              // catch array, here because if val null cannot read prop length of null
+              r[field] = undefined
+              r[field] = val
+            }else if(typeof val == 'object'){
+              if(val == {}){
+                return false
+              }
+              var iR = {}
+              // catch objects
+              // only two levels here so recursion is kinda .. meh
+              for(var iField in val){
+                var iVal = val[iField]
+                if(!nullChk(iVal)){
+                  iR[iField] = undefined
+                  iR[iField] = iVal
+                }
+              }
+              if(iR != {}){
+                r[field] = undefined
+                r[field] = iR
+              }
+            }
+          }
+          //console.log(t)
+          //console.log('************')
+          //console.log(r)
+          return r
+         
+        })
+        //console.log(filtered)
+        //prettyPrintResponse(transactionsResponse);
         response.json({error: null, transactions: transactionsResponse});
       }
     });
