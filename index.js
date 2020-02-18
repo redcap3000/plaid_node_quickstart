@@ -207,8 +207,10 @@ app.get('/transactions', function(request, response, next) {
 
   }
   if(typeof startDate != 'undefined' && startDate && typeof endDate != 'undefined' && endDate){
+    // should be ok when retrieving access by year, but ideally should retrieve access
+    // per month for 'large' datasets otherwise implement promise to populate until end
     client.getTransactions(ACCESS_TOKEN, startDate, endDate, {
-      count: 250,
+      count: 500,
       offset: 0,
     }, function(error, transactionsResponse) {
       if (error != null) {
