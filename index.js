@@ -265,7 +265,7 @@ app.get('/transactions', function(request, response, next) {
         })
         //console.log(filtered)
         //prettyPrintResponse(transactionsResponse);
-        response.json({error: null, transactions: transactionsResponse});
+        response.json({error: null, transactions: {transactions: filtered}});
       }
     });
   }else{
