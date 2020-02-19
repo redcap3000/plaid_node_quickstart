@@ -402,47 +402,74 @@ function tfCompare(transactionData,tf){
     var transactionCats={}
     var transactionCatsTotals={}
     var transactionCatsTitles={}
+    // hmm... 
+    var transactionDates={}
     
     preFilterCollection.filter(function(t){
-      console.table(t)
-      var cat = t.category
+      //console.log(t.date)   
+      if(typeof transactionDates[t.name] == 'undefined'){
+        transactionDates[t.name]=[]
+      }
+      if(typeof transactionDates[t.name][t.date] == 'undefined'){
+        transactionDates[t.name][t.date]=[]
+      }
+
+      transactionDates[t.name][t.date].push(t.amount)
+
+      
+      //if(t.category == 'Transfer Withdrawal' || t.category == 'Transfer Third Party' || t.category == 'Transfer Deposit'){
+        // this doesnt have a comma so .. complicaeed?
+      
+      // t.category = t.category.split(' ').join(',')
+      
+        //console.log(t.category)
+      //}
+      var cat = t.category.split(',')
+      if(cat.length == 1){
+        cat = t.category
+      }else if(cat.length == 2){
+        cat = cat.join(',')
+      }else if(cat.length == 3){
+        cat.unshift()
+        cat = cat[0]+', '+cat[1]
+      }
+      
       
       // look for a comma in the name..
-      var name_proc = t.name.split(',')
-      if(name_proc.length > 1){
-        // looking for 'Direct Deposit' and 'Direct Withdrawal'
-        console.log(name_proc)
-        // proll sanitize/normalize string too
-        if(name_proc[0] == 'Direct Deposit' || name_proc[0] == 'Direct Withdrawal'){
-          console.log(t.name)
-          t.name = name_proc.unshift()
-          console.log(t.name)
-        }
-      }
+    
 
       if(typeof transactionCats[cat] == 'undefined'){
         // find similar category? 
-        console.log(cat + ' : ' + t.name)
+        //console.log(cat + ' : ' + t.name)
         transactionCats[cat] = 1
         transactionCatsTotals[cat] = t.amount
+
         transactionCatsTitles[cat] = []
+
         transactionCatsTitles[cat].push(t.name)
       }else{
+        
         transactionCats[cat] += 1
         transactionCatsTotals[cat] += t.amount
-        var idxChk = transactionCatsTitles[cat].indexOf(t.name)
+        //var idxChk = transactionCatsTitles[cat].indexOf(t.name)
         // checking for duplicate transactions to modify the title name
         // rather than more elements
-          transactionCatsTitles[cat].push(t.name)
-      }
+        if(transactionCatsTitles[cat].indexOf(t.name) === -1){
 
+          transactionCatsTitles[cat].push(t.name)
+        }
+        //console.log(cat)
+        //if(cat == 'Transfer'){
+        //  console.log(cat + ' : ' + t.name + ' ' + transactionCats[cat] + ' amount ' + transactionCatsTotals[cat]  )
+        //}
+      }
 
     })
 
     // process duplicate transaction titles
-    for(var cat in transactionCatsTitles){
-        transactionCatsTitles[cat] = (transactionCatsTitles[cat].every( (val, i, arr) => val === arr[0] ) ?transactionCatsTitles[cat][0] : transactionCatsTitles[cat])
-    }
+    //for(var cat in transactionCatsTitles){
+    //    transactionCatsTitles[cat] = (transactionCatsTitles[cat].every( (val, i, arr) => val === arr[0] ) ? transactionCatsTitles[cat][0] : transactionCatsTitles[cat])
+    //}
 
     // vars for total cash in / cash out
     // deposits
@@ -450,7 +477,7 @@ function tfCompare(transactionData,tf){
     // withdrawl
     var cashOut = 0
     // group based on commas
-    transactionGrouping= {}
+    var transactionGrouping= {}
     for(var cat in transactionCats){
       var cats = cat.split(',')
       var actionGrp = cats[0]
@@ -504,9 +531,41 @@ function tfCompare(transactionData,tf){
                 divCenter.appendChild(buildDiv('item-data-row__nicename',grp.type))
                 
                // group title/transactions
-                divCenter.appendChild(
-                  buildDiv('item-data-row__description',grp.transactions)
-                )
+
+               var groupTransactions =buildDiv('item-data-row')
+               var centerRow = buildDiv('item-data-row__center')
+                  
+                //console.log(grp)
+                grp.transactions.filter(function(tr){
+                  // how to get other datas for this?
+                   // transactionDates[t.date][t.name].push(t.amount)
+                  var transDates = []
+                  var datesDiv = buildDiv('item-data-row')
+                  var titleDiv = buildDiv('item-data-row')
+                  titleDiv.appendChild(buildDiv('item-data-row__nicename',tr))
+                  datesDiv.appendChild(titleDiv)
+                  if(typeof transactionDates[tr] != 'undefined'){
+                    /console.log(transactionDates[tr])
+                    //var iDiv = buildDiv('item-data-row')
+                    for(var tDate in transactionDates[tr]){
+                      transactionDates[tr][tDate].filter(function(td){
+                        var tRow = buildDiv('item-data-row')
+                        tRow.appendChild(buildDiv('item-data-row__left',moment(tDate).format('MM/DD')))
+                        tRow.appendChild(buildDiv('item-data-row__center',td))
+                        datesDiv.appendChild(tRow)
+                      })  
+                    }
+                    //datesDiv.appendChild(iDiv)
+                    
+                  }
+                  
+                  groupTransactions.appendChild(datesDiv)
+                  groupTransactions.appendChild(centerRow)
+
+                  //groupTransactions.appendChild(buildDiv('item-data-row__center',))
+                })
+                divCenter.appendChild(groupTransactions)
+                
                 div.appendChild(divCenter)
                 var divRight = buildDiv('item-data-row__right')
                 // dollar amount
