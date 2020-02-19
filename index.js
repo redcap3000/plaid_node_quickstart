@@ -184,8 +184,13 @@ app.post('/get_access_token', function(request, response, next) {
 
 // Retrieve Transactions for an Item
 // https://plaid.com/docs/#transactions
+// pass access token via client :/
+
 app.get('/transactions', function(request, response, next) {
   // Pull transactions for the Item for the last 30 days
+  if(typeof request.query.access_token == 'undefined'){
+    prettyPrintResponse({error:'access_token not provided'});
+  }
   if(typeof request.query.startDate != 'undefined')
   {
      
@@ -209,7 +214,7 @@ app.get('/transactions', function(request, response, next) {
   if(typeof startDate != 'undefined' && startDate && typeof endDate != 'undefined' && endDate){
     // should be ok when retrieving access by year, but ideally should retrieve access
     // per month for 'large' datasets otherwise implement promise to populate until end
-    client.getTransactions(ACCESS_TOKEN, startDate, endDate, {
+    client.getTransactions(request.query.access_token, startDate, endDate, {
       count: 500,
       offset: 0,
     }, function(error, transactionsResponse) {

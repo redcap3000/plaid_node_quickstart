@@ -225,12 +225,7 @@
           $.post('/get_access_token', {
             public_token: public_token
           }, function(data) {
-            $('#container').fadeOut('fast', function() {
-              $('#item_id').text(data.item_id);
-              $('#access_token').text(data.access_token);
-              $('#intro').hide();
-              $('#app, #steps').fadeIn('slow');
-            });
+             $(location).attr('href',window.location.href+'?access_token='+data.access_token);
           });
         },
       });
@@ -338,7 +333,7 @@
         TRANSACTIONS
     */
     $('#get-transactions-btn').on('click', function(e) {
-      $.get('/transactions', function(data) {
+      $.get('/transactions?access_token='+qs('access_token'), function(data) {
         transactionData = data
             transactionCheckLoop()
         if (data.error != null && data.error.error_code != null) {
@@ -552,33 +547,20 @@ function fetchCompareTransactions(range){
   var thisR = range[0]
   var lastR = range[1]
   var twoRAgo = range[2]
-
- $.get('/transactions?startDate='+thisR[0].format('YYYY-MM-DD')+'&endDate='+thisR[1].format('YYYY-MM-DD'), function(firstSet) {
+  range.filter(function(r){
+    // this may not happen in order...
+      $.get('/transactions?access_token='+qs('access_token')+'&startDate='+r[0].format('YYYY-MM-DD')+'&endDate='+r[1].format('YYYY-MM-DD'), function(firstSet) {
         // thisR
-       tfCompare(firstSet,thisR)
-                  
+       tfCompare(firstSet,r)
+      }
+    )
 
-        $.get('/transactions?startDate='+lastR[0].format('YYYY-MM-DD')+'&endDate='+lastR[1].format('YYYY-MM-DD'), function(midSet){
-          // lastR
-            tfCompare(midSet,lastR)
-
-            $.get('/transactions?startDate='+twoRAgo[0].format('YYYY-MM-DD')+'&endDate='+twoRAgo[1].format('YYYY-MM-DD'),
-              function(endSet){
-                /*
-                  DO THINGS HERE
-                */
-                tfCompare(endSet,twoRAgo)
-                
-                
-
-              })
-          })
-
-     })  
+  })
+   
 }
 
 
-fetchCompareTransactions(dateAnalysis('months'))
+fetchCompareTransactions(dateAnalysis())
 
 function getDateRange(len,date){
   // give date and length (month,year,week ?)
