@@ -37,100 +37,12 @@
 
         <div id="app" class="connected-view">
 
-          <div class="box">
+          <div class="box" id="main_display">
 
             <!-- transaction grouping counts? -->
 
-            <div class="item-data-row" id="transactionGrouping">
-
-            </div>
-
-            <!--Transactions -->
-            <div class="item-data-row">
-              <div class="item-data-row__left">
-                <div class="item-data-row__request-type">post</div>
-              </div>
-              <div class="item-data-row__center">
-                <div class="item-data-row__nicename">Transactions</div>
-                <div class="item-data-row__endpoint">/transactions/get</div>
-                <div class="item-data-row__description">Retrieve transactions for this month.</div>
-              </div>
-              <div class="item-data-row__right">
-                <button id="get-transactions-btn" class="button button--is-small button--is-default button--is-full-width">Send request</button>
-              </div>
-              <div class="item-data-row__response">
-                <table><tbody id="get-transactions-data"></tbody></table>
-              </div>
-            </div>
-        <!--Transactions2 -->
-            <div class="item-data-row">
-              <div class="item-data-row__left">
-                <div class="item-data-row__request-type">post</div>
-              </div>
-              <div class="item-data-row__center">
-                <div class="item-data-row__nicename">Transactions 2</div>
-                <div class="item-data-row__endpoint">/transactions/get</div>
-                <div class="item-data-row__description">Retrieve transactions for the previous month.</div>
-              </div>
-              <div class="item-data-row__right">
-                <button id="get-transactions2-btn" class="button button--is-small button--is-default button--is-full-width">Send request</button>
-              </div>
-              <div class="item-data-row__response">
-                <table><tbody id="get-transactions2-data"></tbody></table>
-              </div>
-            </div>
-        <!--Transactions3 -->
-            <div class="item-data-row">
-              <div class="item-data-row__left">
-                <div class="item-data-row__request-type">post</div>
-              </div>
-              <div class="item-data-row__center">
-                <div class="item-data-row__nicename">Transactions 3</div>
-                <div class="item-data-row__endpoint">/transactions/get</div>
-                <div class="item-data-row__description">Retrieve transactions for 2 months ago.</div>
-              </div>
-              <div class="item-data-row__right">
-                <button id="get-transactions3-btn" class="button button--is-small button--is-default button--is-full-width">Send request</button>
-              </div>
-              <div class="item-data-row__response">
-                <table><tbody id="get-transactions3-data"></tbody></table>
-              </div>
-            </div>
             <!-- Identity -->
-            <div class="item-data-row">
-              <div class="item-data-row__left">
-                <div class="item-data-row__request-type">post</div>
-              </div>
-              <div class="item-data-row__center">
-                <div class="item-data-row__nicename">Identity</div>
-                <div class="item-data-row__endpoint">/identity/get</div>
-                <div class="item-data-row__description">Retrieve Identity information on file with the bank. Reduce fraud by comparing user-submitted data to validate identity.</div>
-              </div>
-              <div class="item-data-row__right">
-                <button id="get-identity-btn" class="button button--is-small button--is-default button--is-full-width">Send request</button>
-              </div>
-              <div class="item-data-row__response">
-                <table><tbody id="get-identity-data"></tbody></table>
-              </div>
-            </div>
-
-            <!-- Balance -->
-            <div class="item-data-row">
-              <div class="item-data-row__left">
-                <div class="item-data-row__request-type">post</div>
-              </div>
-              <div class="item-data-row__center">
-                <div class="item-data-row__nicename">Balance</div>
-                <div class="item-data-row__endpoint">/accounts/balance/get</div>
-                <div class="item-data-row__description">Check balances in real time to prevent non-sufficient funds fees.</div>
-              </div>
-              <div class="item-data-row__right">
-                <button id="get-balance-btn" class="button button--is-small button--is-default button--is-full-width">Send request</button>
-              </div>
-              <div class="item-data-row__response">
-                <table><tbody id="get-balance-data"></tbody></table>
-              </div>
-            </div>
+            
 
           </div>
 
@@ -251,31 +163,6 @@
       handler.open();
     });
 
-    $('#get-accounts-btn').on('click', function(e) {
-      $.get('/accounts', function(data) {
-
-        $('#get-accounts-data').slideUp(function() {
-          if (data.error != null) {
-            displayError(this, data.error);
-            return;
-          }
-          var html = '<tr><td><strong>Name</strong></td><td><strong>Balances</strong></td><td><strong>Subtype</strong></td><td><strong>Mask</strong></td></tr>';
-          data.accounts.accounts.forEach(function(account, idx) {
-            html += '<tr>';
-            html += '<td>' + account.name + '</td>';
-            html += '<td>$' + (account.balances.available != null ? account.balances.available : account.balances.current) + '</td>';
-            html += '<td>' + account.subtype + '</td>';
-            html += '<td>' + account.mask + '</td>';
-            html += '</tr>';
-          });
-
-          $(this).html(html).slideDown();
-        });
-      });
-    });
-
- 
-
     $('#get-identity-btn').on('click', function(e) {
       $.get('/identity', function(data) {
         $('#get-identity-data').slideUp(function() {
@@ -367,120 +254,7 @@
         }
       });
     });
-    /*
-
-      /*
-        TRANSACTIONS - this month vs. last month
-    */
-    $('#get-transactions2-btn').on('click', function(e) {
-      var dates = getDateRange()
-      console.log(dates[1])
-      if(typeof dates == 'undefined' || !dates){
-        return false
-      }
-      $.get('/transactions?startDate='+dates[1][0].format('YYYY-MM-DD')+'&endDate='+dates[1][1].format('YYYY-MM-DD'), function(data) {
-        transactionData = data
-        transactionCheckLoop()
-
-        if (data.error != null && data.error.error_code != null) {
-          // Format the error
-          var errorHtml = '<div class="inner"><p>' +
-           '<strong>' + data.error.error_code + ':</strong> ' +
-           (data.error.display_message == null ? data.error.error_message : data.error.display_message)  + '</p></div>';
-
-       
-          // Render the error
-          $('#get-transactions2-data').slideUp(function() {
-            $(this).slideUp(function() {
-              $(this).html(errorHtml).slideDown();
-            });
-          });
-        } else {
-          $('#get-transactions2-data').slideUp(function() {
-            var html = '<tr><td><strong>Name</strong></td><td><strong>Amount</strong></td><td><strong>Date</strong></td></tr>';
-            data.transactions.transactions.forEach(function(txn, idx) {
-              html += '<tr>';
-              html += '<td>' + txn.name + '</td>';
-              html += '<td>$' + txn.amount + '</td>';
-              html += '<td>' + txn.date + '</td>';
-              html += '</tr>';
-            });
-
-            $(this).slideUp(function() {
-              $(this).html(html).slideDown();
-            });
-          });
-        }
-      });
-    });
-    /*
-
-      /*
-        TRANSACTIONS - this month vs. last month
-    */
-    $('#get-transactions3-btn').on('click', function(e) {
-      var twoMonthsAgo = moment().startOf('month').subtract('2','month')
-
-      $.get('/transactions?startDate='+twoMonthsAgo.format('YYYY-MM-DD')+'&endDate='+twoMonthsAgo.endOf('month').format('YYYY-MM-DD'), function(data) {
-        transactionData = data
-        transactionCheckLoop()
-
-        if (data.error != null && data.error.error_code != null) {
-          // Format the error
-          var errorHtml = '<div class="inner"><p>' +
-           '<strong>' + data.error.error_code + ':</strong> ' +
-           (data.error.display_message == null ? data.error.error_message : data.error.display_message)  + '</p></div>';
-
-         
-          // Render the error
-          $('#get-transactions3-data').slideUp(function() {
-            $(this).slideUp(function() {
-              $(this).html(errorHtml).slideDown();
-            });
-          });
-        } else {
-          $('#get-transactions3-data').slideUp(function() {
-            var html = '<tr><td><strong>Name</strong></td><td><strong>Amount</strong></td><td><strong>Date</strong></td></tr>';
-            data.transactions.transactions.forEach(function(txn, idx) {
-              html += '<tr>';
-              html += '<td>' + txn.name + '</td>';
-              html += '<td>$' + txn.amount + '</td>';
-              html += '<td>' + txn.date + '</td>';
-              html += '</tr>';
-            });
-
-            $(this).slideUp(function() {
-              $(this).html(html).slideDown();
-            });
-          });
-        }
-      });
-    });
-
-
   
-    $('#get-balance-btn').on('click', function(e) {
-      $.get('/balance', function(data) {
-        $('#get-balance-data').slideUp(function() {
-          if (data.error != null) {
-            displayError(this, data.error);
-            return;
-          }
-          var balanceData = data.balance;
-          var html = '<tr><td><strong>Name</strong></td><td><strong>Balance</strong></td><td><strong>Subtype</strong></td><td><strong>Mask</strong></td></tr>';
-          balanceData.accounts.forEach(function(account, idx) {
-            html += '<tr>';
-            html += '<td>' + account.name + '</td>';
-            html += '<td>$' + (account.balances.available != null ? account.balances.available : account.balances.current) + '</td>'
-            html += '<td>' + account.subtype + '</td>';
-            html += '<td>' + account.mask + '</td>';
-            html += '</tr>';
-          });
-
-          $(this).html(html).slideDown();
-        });
-      });
-    });
 
 
   })(jQuery);
@@ -547,18 +321,25 @@ function fetchCompareTransactions(range){
   var thisR = range[0]
   var lastR = range[1]
   var twoRAgo = range[2]
-  range.filter(function(r){
-    // this may not happen in order...
-      $.get('/transactions?access_token='+qs('access_token')+'&startDate='+r[0].format('YYYY-MM-DD')+'&endDate='+r[1].format('YYYY-MM-DD'), function(firstSet) {
-        // thisR
-       tfCompare(firstSet,r)
-      }
-    )
-
-  })
-   
+  var access_token = qs('access_token')
+  if(typeof access_token != 'undefined' && access_token){
+    var buildQ = function(r){
+      return '?access_token=' + access_token + '&startDate='+r[0].format('YYYY-MM-DD')+'&endDate='+r[1].format('YYYY-MM-DD')
+    }
+    $.get('/transactions'+buildQ(thisR),function(firstSet){
+      // check # of transactions if eq to 500 then attempt to fetch more
+      tfCompare(firstSet,thisR)
+      $.get('/transactions'+buildQ(lastR),function(secondSet){
+        tfCompare(secondSet,lastR)
+        $.get('/transactions'+buildQ(twoRAgo),function(thirdSet){
+          tfCompare(thirdSet,twoRAgo)
+        })
+      })
+    })
+  }else{
+    console.log("No access token.")
+  }  
 }
-
 
 fetchCompareTransactions(dateAnalysis())
 
@@ -585,10 +366,12 @@ function getDateRange(len,date){
   ]
 
 }
+// for filtering transactions
+fieldFilter = ['category','date','name','amount','payment_channel','pending']
+
 
 // timeframe compare compares this week vs last week, this month vs last month, this year vs last year
 function tfCompare(transactionData,tf){
- console.log(transactionData)
   var trxCollection = transactionData.transactions.transactions
   var preFilterCollection = []
   if(trxCollection.length > 0){
@@ -621,8 +404,25 @@ function tfCompare(transactionData,tf){
     var transactionCatsTitles={}
     
     preFilterCollection.filter(function(t){
+      console.table(t)
       var cat = t.category
+      
+      // look for a comma in the name..
+      var name_proc = t.name.split(',')
+      if(name_proc.length > 1){
+        // looking for 'Direct Deposit' and 'Direct Withdrawal'
+        console.log(name_proc)
+        // proll sanitize/normalize string too
+        if(name_proc[0] == 'Direct Deposit' || name_proc[0] == 'Direct Withdrawal'){
+          console.log(t.name)
+          t.name = name_proc.unshift()
+          console.log(t.name)
+        }
+      }
+
       if(typeof transactionCats[cat] == 'undefined'){
+        // find similar category? 
+        console.log(cat + ' : ' + t.name)
         transactionCats[cat] = 1
         transactionCatsTotals[cat] = t.amount
         transactionCatsTitles[cat] = []
@@ -635,13 +435,14 @@ function tfCompare(transactionData,tf){
         // rather than more elements
           transactionCatsTitles[cat].push(t.name)
       }
+
+
     })
 
     // process duplicate transaction titles
     for(var cat in transactionCatsTitles){
         transactionCatsTitles[cat] = (transactionCatsTitles[cat].every( (val, i, arr) => val === arr[0] ) ?transactionCatsTitles[cat][0] : transactionCatsTitles[cat])
     }
-
 
     // vars for total cash in / cash out
     // deposits
@@ -676,16 +477,16 @@ function tfCompare(transactionData,tf){
      //div.appendChild(buildDiv('item-data-row__left cashIn',Math.abs(cashIn)))
      
      var leftDiv = buildDiv('item-data-row__left')
-     leftDiv.appendChild(buildDiv('item-data-row__nicename cashOut',cashOut + '&nbsp;'))
+     leftDiv.appendChild(buildDiv('item-data-row__nicename cashOut',cashOut.toFixed(2) + '&nbsp;'))
      
-     leftDiv.appendChild(buildDiv('item-data-row__nicename cashIn',Math.abs(cashIn)))
+     leftDiv.appendChild(buildDiv('item-data-row__nicename cashIn',Math.abs(cashIn).toFixed(2)))
       
       div.appendChild(leftDiv)
      
      div.appendChild(buildDiv('item-data-row__center',tf[0].format('MM-DD-YY') + ' to ' + tf[1].format('MM-DD-YY') ))
      div.appendChild(buildDiv('item-data-row__left cashNet',(cashOut-Math.abs(cashIn)).toFixed(2)))
 
-     document.body.appendChild(div)
+     document.getElementById('main_display').appendChild(div)
 
      for(var action in transactionGrouping){
               transactionGrouping[action].filter(function(grp){
@@ -710,10 +511,10 @@ function tfCompare(transactionData,tf){
                 var divRight = buildDiv('item-data-row__right')
                 // dollar amount
                 divRight.appendChild(
-                  buildDiv('item-data-row__request-type',grp.total)
+                  buildDiv('item-data-row__request-type',grp.total.toFixed(2))
                 )
                 div.appendChild(divRight)
-                document.body.appendChild(div)
+                document.getElementById('main_display').appendChild(div)
               })
             }
 
@@ -734,158 +535,8 @@ function transactionCompare(){
       }
     }
 }
-// for filtering transactions
-fieldFilter = ['category','date','name','amount','payment_channel','pending']
 
 
-function transactionCheckLoop(start)
-{
-  console.log('transactionCheckLoop ' + start)
-  if(typeof start == 'undefined'){
-    if(typeof transactionData != 'undefined'){
-      // transform.
-      if(transactionData.error == null){
-        if(typeof transactionData.transactions != 'undefined'){
-         
-          if(typeof transactionData.transactions.transactions != 'undefined'){
-            var trxCollection = transactionData.transactions.transactions
-            var preFilterCollection = []
-            if(trxCollection.length > 0){
-            
-              trxCollection.filter(function(trx){
-                var preFilter = {}
-                for(var field in trx){
-                  if(fieldFilter.indexOf(field) > -1){
-                    preFilter[field]=true
-                    if(field == 'name'){
-                      // text transformation
-                      preFilter[field] = trx[field].split(' ')
-                         .map(w => w[0].toUpperCase() + w.substr(1).toLowerCase())
-                         .join(' ')
-                    }else if(field == 'category'){
-                      preFilter[field] = trx[field].join(',')
-
-                    }else{
-                      preFilter[field] = trx[field]
-                    }
-                  }
-                }
-                preFilterCollection.push(preFilter)
-              })
-            }
-            // build common categories
-            transactionCats={}
-            transactionCatsTotals={}
-            transactionCatsTitles={}
-            
-            preFilterCollection.filter(function(t){
-              var cat = t.category
-              if(typeof transactionCats[cat] == 'undefined'){
-                transactionCats[cat] = 1
-                transactionCatsTotals[cat] = t.amount
-                transactionCatsTitles[cat] = []
-                transactionCatsTitles[cat].push(t.name)
-              }else{
-                transactionCats[cat] += 1
-                transactionCatsTotals[cat] += t.amount
-                var idxChk = transactionCatsTitles[cat].indexOf(t.name)
-                // checking for duplicate transactions to modify the title name
-                // rather than more elements
-                  transactionCatsTitles[cat].push(t.name)
-              }
-            })
-
-            // process duplicate transaction titles
-            for(var cat in transactionCatsTitles){
-                transactionCatsTitles[cat] = (transactionCatsTitles[cat].every( (val, i, arr) => val === arr[0] ) ?transactionCatsTitles[cat][0] : transactionCatsTitles[cat])
-            }
-            // vars for total cash in / cash out
-            // deposits
-            cashIn = 0
-            // withdrawl
-            cashOut = 0
-            // group based on commas
-            transactionGrouping= {}
-            for(var cat in transactionCats){
-              var cats = cat.split(',')
-              var actionGrp = cats[0]
-              var typeGrp = cats[1]
-              if(typeof transactionGrouping[actionGrp] == 'undefined'){
-                transactionGrouping[actionGrp] = []
-              }
-              var temp = {}
-              temp['type']= typeGrp
-              temp['count'] = transactionCats[cat]
-              temp['total'] = transactionCatsTotals[cat]
-              if(temp['total'] < 0){
-                cashIn += temp['total']
-              }else{
-                cashOut += temp['total']
-                
-              }
-              temp['transactions'] = transactionCatsTitles[cat]
-              transactionGrouping[actionGrp].push(temp)
-              // should i do the dom updating here?
-            }
-            // update dom
-            // needs improvement ... 
-            document.getElementById('cashIn').innerHTML = ''
-            document.getElementById('cashIn').innerHTML = 'In<br/>$ ' + Math.abs(cashIn).toFixed(2)
-            document.getElementById('cashOut').innerHTML = ''
-            document.getElementById('cashOut').innerHTML = 'Out<br/>$ ' + cashOut.toFixed(2)
-            document.getElementById('cashNet').innerHTML = 'Net<br/>$ ' + (Math.abs(cashIn) - cashOut).toFixed(2)
-            
-            document.getElementById('transactionGrouping').innerHTML=''
-        
-            for(var action in transactionGrouping){
-              transactionGrouping[action].filter(function(grp){
-                var div = buildDiv('item-data-row')
-                var divLeft = buildDiv('item-data-row__left')
-                divLeft.appendChild(
-                  // group count
-                    buildDiv('item-data-row__request-type ',grp.count)
-                )
-                var divLeftAction = buildDiv('item-data-row__request-type ' + action[0]+action[1],action[0]+action[1])
-
-                divLeft.appendChild(divLeftAction)
-                
-                div.appendChild(divLeft)
-
-                var divCenter = buildDiv('item-data-row__center')
-
-                // grouping type                
-                divCenter.appendChild(buildDiv('item-data-row__nicename',grp.type))
-                
-               // group title/transactions
-                divCenter.appendChild(
-                  buildDiv('item-data-row__description',grp.transactions)
-                )
-
-                div.appendChild(divCenter)
-
-                var divRight = buildDiv('item-data-row__right')
-                // dollar amount
-                divRight.appendChild(
-                  buildDiv('item-data-row__request-type',grp.total)
-                )
-             
-                div.appendChild(divRight)
-                
-                document.getElementById('transactionGrouping').appendChild(div)
-              })
-            }
-          }
-          return clearInterval(transactionInterval)
-        }
-      }
-    }
-    return false
-  }else{
-    transactionInterval = setInterval(transactionCheckLoop,1000 * 5)
-    return true
-  }
-}
-transactionIntervalStatus = transactionCheckLoop(true) 
 </script>
 </body>
 </html>
