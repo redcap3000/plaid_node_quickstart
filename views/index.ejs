@@ -39,15 +39,13 @@
             <button onClick="
 fetchCompareTransactions(dateAnalysis())">Year</button><button onClick="
 fetchCompareTransactions(dateAnalysis('month'))">Month</button><button onClick="
-fetchCompareTransactions(dateAnalysis('week'))">Week</button>
+fetchCompareTransactions(dateAnalysis('week'))">Week</button><button onClick="
+fetchQuarterlyTransactions()">Quarters</button>
             <div class="box" id="stats">
               </div>
           <div class="box" id="main_display">
-
             <!-- transaction grouping counts? -->
-
             <!-- Identity -->
-            
 
           </div>
 
@@ -205,60 +203,6 @@ fetchCompareTransactions(dateAnalysis('week'))">Week</button>
       });
     });
 
-    $('#get-item-btn').on('click', function(e) {
-      $.get('/item', function(data) {
-        $('#get-item-data').slideUp(function() {
-          if (data.error) {
-            displayError(this, data.error);
-          } else {
-            var html = '';
-            html += '<tr><td>Institution name</td><td>' + data.institution.name + '</td></tr>';
-            html += '<tr><td>Billed products</td><td>' + data.item.billed_products.join(', ') + '</td></tr>';
-            html += '<tr><td>Available products</td><td>' + data.item.available_products.join(', ') + '</td></tr>';
-
-            $(this).html(html).slideDown();
-          }
-        });
-      });
-    });
-    /*
-        TRANSACTIONS
-    */
-    $('#get-transactions-btn').on('click', function(e) {
-      $.get('/transactions?access_token='+qs('access_token'), function(data) {
-        transactionData = data
-            transactionCheckLoop()
-        if (data.error != null && data.error.error_code != null) {
-          // Format the error
-          var errorHtml = '<div class="inner"><p>' +
-           '<strong>' + data.error.error_code + ':</strong> ' +
-           (data.error.display_message == null ? data.error.error_message : data.error.display_message)  + '</p></div>';
-
-        
-          // Render the error
-          $('#get-transactions-data').slideUp(function() {
-            $(this).slideUp(function() {
-              $(this).html(errorHtml).slideDown();
-            });
-          });
-        } else {
-          $('#get-transactions-data').slideUp(function() {
-            var html = '<tr><td><strong>Name</strong></td><td><strong>Amount</strong></td><td><strong>Date</strong></td></tr>';
-            data.transactions.transactions.forEach(function(txn, idx) {
-              html += '<tr>';
-              html += '<td>' + txn.name + '</td>';
-              html += '<td>$' + txn.amount + '</td>';
-              html += '<td>' + txn.date + '</td>';
-              html += '</tr>';
-            });
-
-            $(this).slideUp(function() {
-              $(this).html(html).slideDown();
-            });
-          });
-        }
-      });
-    });
   
 
 
@@ -301,24 +245,18 @@ function dateAnalysis(range){
     return false
   } 
   var t = getDateRange(range,moment())
-
   var thisR = t[0]
   var lastR = t[1]
-
   t = getDateRange(range,lastR[0])
 
   var twoRAgo = t[1]
-    
-  console.table(thisR)
-  console.table(lastR)
-  console.table(twoRAgo)
+
   return [
     thisR,
     lastR,
     twoRAgo
   ]
-  // compare [thisYear,lastYear]
-  //           [thisYear,twoYearsAgo]
+
 }
 
 function getMonthlyQuarters(date){
@@ -332,19 +270,16 @@ function getMonthlyQuarters(date){
         dates.push(startOfYear.toString())
         startOfYear.add(1,'day')
       }
-      //console.log(dates)
       return dates
-    }
+}
+
 function buildQ(r,internal){
   if(typeof r != 'undefined' && r.length == 2){
-    
     if(moment(r[0]).isSameOrBefore() && moment(r[1]).isSameOrBefore() || typeof internal == 'undefined'){
       r[0]=moment(r[0])
       r[1]=moment(r[1])
-     
     }else{
       return false
-      //console.log(r)
     }
    var access_token = qs('access_token')
     if(typeof access_token != 'undefined' && access_token){
@@ -355,43 +290,49 @@ function buildQ(r,internal){
 }
     
 function fetchQuarterlyTransactions(){
-  quarters = []
-  
   var datesF = []
-
   var quarterDates = dateAnalysis().filter(function(o){
    return getMonthlyQuarters(o).filter(function(date,i){
     datesF.push(date)
    }) 
   })
-  console.log(datesF)
-  //console.log(quarterDates)
-  //console.log(quarterDates)
-      datesF.filter(function(d,i){
-        console.log(d.toString())
-        //if(i+ 1 < 9){
-          if((i+1) % 2 === 0){
-            var startD = datesF[i-1]
-            var endD = d
-          //  console.log(buildQ([startD,endD],true))
-          //  return false
-            $.get('/transactions'+buildQ([startD,endD],true),function(r){
-              console.log((i + 1) % 4 / (i + 1))
-              if(i + 1 < 5){
-                var quarterKey = (i + 1)
-              }else{
-                var quarterKey = (i + 1)
-                
-              }
-              if(r.error == null){
-                quarters.push( {startD: startD,endD:endD,transactions: r.transactions})
-              
-              }
-              console.log(quarters.length)
-            })  
+  var quarters = datesF.map(function(d,i){return ((i+1) % 2 === 0 ? i:undefined)})
+  var results = []
+  datesF.filter(function(d,i){
+    if((i+1) % 2 === 0){
+      var startD = datesF[i-1]
+      var endD = d
+      var query = buildQ([startD,endD],true)
+      if(query){
+        $.get('/transactions'+query,function(r){
+          if(i + 1 < 5){
+            var quarterKey = (i + 1)
+          }else{
+            var quarterKey = (i + 1)
           }
-        //}
-      })
+          if(r.error == null){
+            quarters[i]= {startD: startD,endD:endD,transactions: r.transactions}
+            quarters.filter(function(q,x){
+              if(typeof q != 'undefined' && typeof q != 'number' && typeof q == 'object'){
+                if(typeof results[x] != 'object'){
+                  results[x] = q
+                }
+              }
+            })
+            if(results.length == 24){
+              document.getElementById('main_display').innerHTML = ''
+              results.filter(function(r){
+                var t = r.transactions.transactions
+                if(t.length > 0){
+                  tfCompare(t,[moment(r.startD),moment(r.endD)])
+                }
+              })
+            }
+          }
+        })  
+      }
+    }
+  })
 }
 
 transactionComparisons={}
