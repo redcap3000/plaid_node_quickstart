@@ -321,8 +321,8 @@ function dateAnalysis(range){
   //           [thisYear,twoYearsAgo]
 }
 
-
-    function getMonthlyQuarters(date){
+function getMonthlyQuarters(date){
+      var date=date[0]
       var startOfYear = date.startOf('year')
       var dates = []
       for(var i = 1;i< 5;i++){
@@ -332,9 +332,67 @@ function dateAnalysis(range){
         dates.push(startOfYear.toString())
         startOfYear.add(1,'day')
       }
+      //console.log(dates)
       return dates
     }
+function buildQ(r,internal){
+  if(typeof r != 'undefined' && r.length == 2){
+    
+    if(moment(r[0]).isSameOrBefore() && moment(r[1]).isSameOrBefore() || typeof internal == 'undefined'){
+      r[0]=moment(r[0])
+      r[1]=moment(r[1])
+     
+    }else{
+      return false
+      //console.log(r)
+    }
+   var access_token = qs('access_token')
+    if(typeof access_token != 'undefined' && access_token){
+      return '?access_token=' + access_token + '&startDate='+r[0].format('YYYY-MM-DD')+'&endDate='+r[1].format('YYYY-MM-DD')
+    }
+    return false
+  }
+}
+    
+function fetchQuarterlyTransactions(){
+  quarters = []
+  
+  var datesF = []
 
+  var quarterDates = dateAnalysis().filter(function(o){
+   return getMonthlyQuarters(o).filter(function(date,i){
+    datesF.push(date)
+   }) 
+  })
+  console.log(datesF)
+  //console.log(quarterDates)
+  //console.log(quarterDates)
+      datesF.filter(function(d,i){
+        console.log(d.toString())
+        //if(i+ 1 < 9){
+          if((i+1) % 2 === 0){
+            var startD = datesF[i-1]
+            var endD = d
+          //  console.log(buildQ([startD,endD],true))
+          //  return false
+            $.get('/transactions'+buildQ([startD,endD],true),function(r){
+              console.log((i + 1) % 4 / (i + 1))
+              if(i + 1 < 5){
+                var quarterKey = (i + 1)
+              }else{
+                var quarterKey = (i + 1)
+                
+              }
+              if(r.error == null){
+                quarters.push( {startD: startD,endD:endD,transactions: r.transactions})
+              
+              }
+              console.log(quarters.length)
+            })  
+          }
+        //}
+      })
+}
 
 transactionComparisons={}
 function fetchCompareTransactions(range){
@@ -344,9 +402,7 @@ function fetchCompareTransactions(range){
   var compare = []
   var access_token = qs('access_token')
   if(typeof access_token != 'undefined' && access_token){
-    var buildQ = function(r){
-      return '?access_token=' + access_token + '&startDate='+r[0].format('YYYY-MM-DD')+'&endDate='+r[1].format('YYYY-MM-DD')
-    }
+
     $.get('/transactions'+buildQ(thisR),function(firstSet){
       // check # of transactions if eq to 500 then attempt to fetch more
       // clear old element
@@ -428,7 +484,14 @@ fieldFilter = ['category','date','name','amount','payment_channel','pending']
 
 // timeframe compare compares this week vs last week, this month vs last month, this year vs last year
 function tfCompare(transactionData,tf){
-  var trxCollection = transactionData.transactions.transactions
+  if(typeof transactionData.transactions != 'undefined' && typeof transactionData.transactions.transactions != 'undefined'){
+    var trxCollection = transactionData.transactions.transactions
+
+  }else if(typeof transactionData.transactions != 'undefined'){
+    var trxCollection = transactionData.transactions
+  }else{
+    var trxCollection = transactionData
+  }
   var preFilterCollection = []
   if(trxCollection.length > 0){
   
