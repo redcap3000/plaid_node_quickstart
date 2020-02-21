@@ -40,6 +40,8 @@
 fetchCompareTransactions(dateAnalysis())">Year</button><button onClick="
 fetchCompareTransactions(dateAnalysis('month'))">Month</button><button onClick="
 fetchCompareTransactions(dateAnalysis('week'))">Week</button>
+            <div class="box" id="stats">
+              </div>
           <div class="box" id="main_display">
 
             <!-- transaction grouping counts? -->
@@ -324,6 +326,7 @@ function fetchCompareTransactions(range){
   var thisR = range[0]
   var lastR = range[1]
   var twoRAgo = range[2]
+  var compare = []
   var access_token = qs('access_token')
   if(typeof access_token != 'undefined' && access_token){
     var buildQ = function(r){
@@ -333,11 +336,44 @@ function fetchCompareTransactions(range){
       // check # of transactions if eq to 500 then attempt to fetch more
       // clear old element
       document.getElementById('main_display').innerHTML = ''
-      tfCompare(firstSet,thisR)
+      compare.push(tfCompare(firstSet,thisR))
       $.get('/transactions'+buildQ(lastR),function(secondSet){
-        tfCompare(secondSet,lastR)
+        compare.push(tfCompare(secondSet,lastR))
         $.get('/transactions'+buildQ(twoRAgo),function(thirdSet){
-          tfCompare(thirdSet,twoRAgo)
+          
+          document.getElementById('stats').innerHTML = ''
+          compare.push(tfCompare(thirdSet,twoRAgo))
+
+          // this mon vs. last month
+          var ins =[]
+          var outs=[]
+          compare.filter(function(x,i){
+              ins.push(x[0])
+              outs.push(x[1])
+          })
+
+          var stats = {
+
+            inSum : ins.reduce((previous, current) => current += previous),
+            outSum : outs.reduce((previous, current) => current += previous)
+          }
+          stats.inAvg = stats.inSum / ins.length
+          stats.outAvg = stats.outSum / outs.length
+
+          console.table(stats)
+          
+          var statsDiv = buildDiv('item-data-row')
+          statsDiv.appendChild(buildDiv('item-data-row__left cashIn',stats.inAvg.toFixed(2)))
+          statsDiv.appendChild(buildDiv('item-data-row__center','Average'))
+          statsDiv.appendChild(buildDiv('item-data-row__right cashOut',stats.outAvg.toFixed(2)))
+          document.getElementById('stats').appendChild(statsDiv)
+          
+          statsDiv = buildDiv('item-data-row')
+          statsDiv.appendChild(buildDiv('item-data-row__left cashIn',stats.inSum.toFixed(2)))
+          statsDiv.appendChild(buildDiv('item-data-row__center','Total'))
+          statsDiv.appendChild(buildDiv('item-data-row__right cashOut',stats.outSum.toFixed(2)))
+          document.getElementById('stats').appendChild(statsDiv)
+       
         })
       })
     })
@@ -544,6 +580,11 @@ function tfCompare(transactionData,tf){
         document.getElementById('main_display').appendChild(div)
       })
     }
+    // this return is for comparing one tx call to another
+    return [
+      cashIn,
+      cashOut
+    ]
 }
 function transactionCompare(){
     
