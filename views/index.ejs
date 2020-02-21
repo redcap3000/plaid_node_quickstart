@@ -321,6 +321,21 @@ function dateAnalysis(range){
   //           [thisYear,twoYearsAgo]
 }
 
+
+    function getMonthlyQuarters(date){
+      var startOfYear = date.startOf('year')
+      var dates = []
+      for(var i = 1;i< 5;i++){
+        dates.push(startOfYear.toString())
+        startOfYear.add(1,'quarter')
+        startOfYear.subtract(1,'day')
+        dates.push(startOfYear.toString())
+        startOfYear.add(1,'day')
+      }
+      return dates
+    }
+
+
 transactionComparisons={}
 function fetchCompareTransactions(range){
   var thisR = range[0]
