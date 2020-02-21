@@ -71,8 +71,6 @@ fetchQuarterlyTransactions()">Quarters</button>
     // Handles redirect from the oauth response page for the oauth flow.
     if (document.referrer != null && document.referrer.includes('http://localhost:8000/oauth-response.html')) {
       $('#container').fadeOut('fast', function() {
-        $('#item_id').text('<%= ITEM_ID %>');
-        $('#access_token').text('<%= ACCESS_TOKEN %>');
         $('#intro').hide();
         $('#app, #steps').fadeIn('slow');
       });
@@ -352,10 +350,8 @@ function fetchCompareTransactions(range){
       $.get('/transactions'+buildQ(lastR),function(secondSet){
         compare.push(tfCompare(secondSet,lastR))
         $.get('/transactions'+buildQ(twoRAgo),function(thirdSet){
-          
           document.getElementById('stats').innerHTML = ''
           compare.push(tfCompare(thirdSet,twoRAgo))
-
           // this mon vs. last month
           var ins =[]
           var outs=[]
@@ -365,15 +361,12 @@ function fetchCompareTransactions(range){
           })
 
           var stats = {
-
             inSum : ins.reduce((previous, current) => current += previous),
             outSum : outs.reduce((previous, current) => current += previous)
           }
           stats.inAvg = stats.inSum / ins.length
           stats.outAvg = stats.outSum / outs.length
 
-          console.table(stats)
-          
           var statsDiv = buildDiv('item-data-row')
           statsDiv.appendChild(buildDiv('item-data-row__left cashIn',stats.inAvg.toFixed(2)))
           statsDiv.appendChild(buildDiv('item-data-row__center','Average'))
