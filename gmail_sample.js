@@ -1,4 +1,5 @@
 const fs = require('fs');
+const {parse} = require('node-html-parser')
 const readline = require('readline');
 const {google} = require('googleapis');
 // If modifying these scopes, delete token.json.
@@ -134,7 +135,6 @@ function listMessages(auth) {
     r.then(callback);
   }
 
-
   function msgHandler(r,e){
     const fieldFilter = [
       'id',
@@ -146,27 +146,20 @@ function listMessages(auth) {
       'payload'
     ]
     var d = {}
-    //console.log(r.body)
     for(var k in r.data){
       if(fieldFilter.indexOf(k) > -1){
         d[k]=r.data[k]
       }
     }
-   // console.log(typeof d.payload)
     var payloadFilter = [
       'Subject',
-    //  'Date',
-
+      'Date'
     ]
     
     var cashCardPreTerms = {
-
-
       'buy' : 'You purchased',
       'sell' : 'You sold',
       'spend' : 'You spent'
-
-
     }
 
     var cashCardPostTerms = {
@@ -180,17 +173,23 @@ function listMessages(auth) {
     // <term> sent you $200
     var cashCardMidTerms = {
       'recieved' : 'sent you',
-
     }
     var line = ''
+
+    var messageLineObj = {}
+
     d.payload.headers.filter(function(p){
       var key = p.name
       if(payloadFilter.indexOf(key) > -1){
-        //console.log(p.value) 
-        line +=p.value +' '       
+        if(key == 'Date'){
+          messageLineObj.date = p.value
+        }else{
+          line +=p.value +' '
+        }       
+      }else{
+        //console.log(key + ' ' + p.value)
       }
     })
-    //console.log(line)
     var match = []
     for(var action in cashCardPreTerms){
       var term = cashCardPreTerms[action]
@@ -199,24 +198,17 @@ function listMessages(auth) {
       match = line.split(term)
       if(match.length > 1){
         if(action == 'spend'){
-          console.log(line)
-
           term2 = line.split(cashCardPostTerms['boostApplied'])
           // has boost? then split on period to extract
           term3 = line.split(' at ')
-          var amount = term3[0].split('$')[1]
-
+          messageLineObj.amount =  term3[0].split('$')[1]
           var term4 = term3[1].split('. Your ')
-
-          var where = term4[0]
-
+          messageLineObj.where = term4[0]
           if(term2.length == 2){
             // get 'where money was spent... '
-            var boostAmount = term4[1].split(' ')[0]
-            console.log(action + '\t' + amount + '\t' + where + '\t***' + boostAmount)
+            messageLineObj.boost = term4[1].split(' ')[0]
             
           }else{
-            console.log(action + '\t' + amount + '\t' + where )
             //console.log('Pre\t'+action + '\t' + match[1])
           
           }
@@ -225,15 +217,88 @@ function listMessages(auth) {
         }
       }
     }
+    if(typeof messageLineObj.boost == 'undefined'){
+      /* boosts can only be applied to outgoing transactions... below
+       * are for deposits and bank transactions
+       *
+       * after parsing the message body, removing whitespace, it contracts everything
+       * so have to look for specific terms to do stuff
+       * so find the first string (usually the beginning) then find the second string, and the value between the two is what we're lookin for
+      */
+      var parsedSearchTerms = {
+
+        'BitcoinDeposit' : 'BTCDeposited'
+      }
+      for(var action in cashCardPostTerms){
+        var term = cashCardPostTerms[action]
+        match = line.split(term)
+        if(match.length > 1){
+          // probably doesnt 'matter' to check the 'received' because sometimes it wont parse the amount properly..
+          if(line.trim() === 'Your Bitcoin deposit completed' || line.trim() === 'Your Bitcoin deposit has been received' ){
+            messageLineObj.where = 'Bitcoin'
+            d.payload.parts.filter(function(prt){
+              if(typeof prt.body.data != 'undefined' && prt.body.data){
+                /* decode base64, encode raw html, parse html body, implode whitespace, use split to match terms
+                 * take inner and apply to 'amount' field if possible
+                 */
+                var buff = new Buffer(prt.body.data, 'base64');
+                var text = buff.toString('ascii');
+                const parsed = parse(text)
+                var btcSelector = 'body'
+                var htmlBody = parsed.querySelector('body');
+                if(typeof parsed != 'undefined' && parsed){
+                  // THE MAGIC HAPPENS HERE
+            
+                  var line2 = parsed.rawText.replace(/\s/g, "")
+                  console.log(line2)
+                  for(var sTerm in parsedSearchTerms){
+                    var test = line2.split(sTerm)
+                    if(test.length > 1){
+                      var test = test[1].split(parsedSearchTerms[sTerm])
+                      if(test.length == 2){
+                        messageLineObj.amount = parseFloat(test[0])
+                        messageLineObj.action = sTerm
+                      }
+                    }else{
+                      //console.log('term not found')
+                    }
+                  }      
+                }else{
+                  console.log(parsed)
+                }          
+              }
+            })
+          }else{
+            /* checks for declined payment
+             *
+             */
+            match = line.split('was declined')
+            if(match.length > 1){
+              // figure out amount
+              match = match[0].split('$')
+              match = match[1].trim().split('payment')
+              if(match.length > 1){
+                messageLineObj.amount = parseFloat(match[0].trim())
+                messageLineObj.where = match[1].trim().replace('at','').trim()
+              }
+            }else{
+              // look for 'was declined?'
+              console.log("something else happened")
+              console.log(line)
+              console.log(match)
+            }
+          }
+          messageLineObj.action = action
+          //console.log('Post\t'+action + '\t' + match[1])
+        }
+      }
+      console.log(messageLineObj)
+
+    }
+
     //if(match.length === 1){
     /*
-    for(var action in cashCardPostTerms){
-      var term = cashCardPostTerms[action]
-      match = line.split(term)
-      if(match.length > 1){
-        console.log('Post\t'+action + '\t' + match[1])
-      }
-    }
+    
     */ 
     //}
     // have to get attachment parts
