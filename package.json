@@ -17,6 +17,7 @@
     "express": "4.16.x",
     "googleapis": "^39.2.0",
     "moment": "2.22.x",
-    "plaid": "4.x.x"
+    "plaid": "4.x.x",
+    "coinbase": "github:redcap3000/coinbase-node"
   }
 }

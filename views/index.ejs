@@ -297,9 +297,11 @@ function fetchQuarterlyTransactions(){
   var quarters = datesF.map(function(d,i){return ((i+1) % 2 === 0 ? i:undefined)})
   var results = []
   datesF.filter(function(d,i){
-    if((i+1) % 2 === 0){
+    if((i+1) % 2 === 0 && i > 0){
       var startD = datesF[i-1]
       var endD = d
+      console.log(startD)
+
       var query = buildQ([startD,endD],true)
       if(query){
         $.get('/transactions'+query,function(r){
@@ -319,12 +321,16 @@ function fetchQuarterlyTransactions(){
             })
             if(results.length == 24){
               document.getElementById('main_display').innerHTML = ''
-              results.filter(function(r){
-                var t = r.transactions.transactions
-                if(t.length > 0){
-                  tfCompare(t,[moment(r.startD),moment(r.endD)])
-                }
-              })
+              // set a time out sometimes records arent present...
+              setTimeout(function(){
+                results.filter(function(r){
+                  var t = r.transactions.transactions
+                  if(t.length > 0){
+                    tfCompare(t,[moment(r.startD),moment(r.endD)])
+                  }
+                })  
+              },2000)
+              
             }
           }
         })  
