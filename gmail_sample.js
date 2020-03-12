@@ -8,18 +8,6 @@ const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
 // created automatically when the authorization flow completes for the first
 // time.
 const TOKEN_PATH = 'token.json';
-/*
-  collection (fetch records from google gmail api)
-
-  presort (group transactions by type : deposit/purchase/etc.)
-
-  process (read html for transaction amount/details)
-
-  confirm (double check entities)
-
-  resolve (print out object/ update collection)
-
-*/
 // Load client secrets from a local file.
 fs.readFile('credentials.json', (err, content) => {
   if (err) return console.log('Error loading client secret file:', err);
@@ -85,75 +73,18 @@ function getNewToken(oAuth2Client, callback) {
   });
 }
 
-/**
- * Lists the labels in the user's account.
- *
- * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
- */
-function listLabels(auth) {
-  const gmail = google.gmail({version: 'v1', auth});
-  gmail.users.labels.list({
-    userId: 'me',
-  }, (err, res) => {
-    if (err) return console.log('The API returned an error: ' + err);
-    const labels = res.data.labels;
-    if (labels.length) {
-      console.log('Labels:');
-      labels.forEach((label) => {
-        console.log(`- ${label.name}`);
-      });
-    } else {
-      console.log('No labels found.');
-    }
-  });
-}
-
-/*
-function getMessages(auth) {
-  const gmail = google.gmail({version: 'v1', auth});
-  gmail.users.messages.list({
-    userId: 'me',
-  }, (err, res) => {
-    if (err) return console.log('The API returned an error: ' + err);
-    const labels = res.data.labels;
-    if (labels.length) {
-      console.log('Labels:');
-      labels.forEach((label) => {
-        console.log(`- ${label.name}`);
-      });
-    } else {
-      console.log('No labels found.');
-    }
-  });
-}
-
-*/
 function getTermBetween(blob,t1,t2){
-  var x = blob.split(t1)
-  if(x.length > 1){
-    var y = x.pop().split(t2)
-    if(y.length > 1){
-      return y[0]
-    }
-  }
-  return false
+  let x = blob.split(t1), y = (x.length > 1 ? x.pop().split(t2) : false)
+  return (y && y.length > 1 ? y.unshift() : false)
 }
 
 function listMessages(auth) {
-  // maxResults
-  // pageToken
-  // q (query) "from:someuser@example.com rfc822msgid:<somemsgid@example.com> is:unread"
-  query = "from:cash@square.com"
-        
-  const userId = 'me'
-  const gmail = google.gmail({version: 'v1', auth});
-
+  const query = "from:cash@square.com", userId = 'me', gmail = google.gmail({version: 'v1', auth});
   function getMessage(userId, messageId, callback) {
-    var r = gmail.users.messages.get({
+    gmail.users.messages.get({
       'userId': userId,
       'id': messageId
-    });
-    r.then(callback);
+    }).then(callback);
   }
 
 function base64Buffer(data,removeSpace){
@@ -175,7 +106,11 @@ function base64Buffer(data,removeSpace){
   }   
   return false
 }
+
+handlerTime = 0
+
   function msgHandler(r,e){
+    var start = new Date().getTime() / 1000
     const fieldFilter = [
       'id',
       'threadId',
@@ -191,75 +126,62 @@ function base64Buffer(data,removeSpace){
         d[k]=r.data[k]
       }
     }
-    var payloadFilter = [
+    const payloadFilter = [
       'Subject',
       'Date'
     ]
     
-    var cashCardPreTerms = {
+    const cashCardPreTerms = {
       'buy' : 'You purchased',
       'sell' : 'You sold',
       'spend' : 'You spent',
       'withdrawal' : 'Your withdrawal of ',
     }
 
-    var cashCardPostTerms = {
+    const cashCardPostTerms = {
       'deposit' : 'Your deposit has been received',
       'depositAvailable' : 'deposit completed',
       'boostApplied' : 'instantly applied',
       'paymentDecline' : 'was declined'
-
     }
-
     // <term> sent you $200
-    var cashCardMidTerms = {
+    const cashCardMidTerms = {
       'recieved' : 'sent you',
     }
     var line = ''
 
     var messageLineObj = {}
-
+    /*
+     *  use headers to build a basic line to determine how to process
+     */
     d.payload.headers.filter(function(p){
-      var key = p.name
+      let key = p.name
       if(payloadFilter.indexOf(key) > -1){
         if(key == 'Date'){
           messageLineObj.date = p.value
         }else{
           line +=p.value +' '
         }       
-      }else{
-        //console.log(key + ' ' + p.value)
       }
     })
     var match = []
     for(var action in cashCardPreTerms){
-      var term = cashCardPreTerms[action]
-      var term2 = ''
-      var term3 = []
-      //console.log(term)
+      let term = cashCardPreTerms[action], term2 = '', term3 = []
       match = line.split(term)
-      //console.log(match)
       if(match.length > 1){
-        //console.log('ACTION\t'+action)
-        messageLineObj.raw = line
         if(action == 'spend'){
           term2 = line.split(cashCardPostTerms['boostApplied'])
           // cant use getTermBetween since there are multiple '.' 
           // has boost? then split on period to extract
-          
-        
           term3 = line.split(' at ')
           //console.log('\n\n\t'+term3)
           messageLineObj.amount =  term3[0].split('$')[1]
-          var term4 = term3[1].split('. Your ')
+          let term4 = term3[1].split('. Your ')
           messageLineObj.where = term4[0]
           if(term2.length == 2){
             // get 'where money was spent... '
             messageLineObj.boost = term4[1].split(' ')[0]
-          }else{
-            //console.log('Pre\t'+action + '\t' + match[1])
           }
-          
         }else if(action == 'buy' || action == 'sell'){
           messageLineObj.action = action
           messageLineObj.where = match[1].trim()
@@ -268,8 +190,7 @@ function base64Buffer(data,removeSpace){
           }else{
             d.payload.parts.filter(function(prt){
               if(typeof prt.body.data != 'undefined' && prt.body.data){
-                var parsed = base64Buffer(prt.body.data,true)
-
+                let parsed = base64Buffer(prt.body.data,true)
                 if(typeof parsed != 'undefined' && parsed){
                   term2+= parsed
                 }      
@@ -278,8 +199,8 @@ function base64Buffer(data,removeSpace){
           }
           // hard coded :/ but i dont have any other transactions (such as stocks) to draw an example from. 
           // could attempt to seperate term2 by capital letters may work... or regex of course :/
-
-          var btcPurchaseMap = {
+          // refactor to adhere to the post terms double mapping..
+          const btcPurchaseMap = {
             'btcAmount'       : ['BTC'  , 'BitcoinPurchase'],
             'btcUsdValue'     : ['BTC$' , 'CompletedPurchased'],
             'btcExchangeRate' : ['BTCExchangeRate$','Fee$'],
@@ -291,20 +212,15 @@ function base64Buffer(data,removeSpace){
             btcPurchaseMap.amount = ['BitcoinSale','BTC$']
             btcPurchaseMap.btcUsdValue[1] = 'CompletedSold'
           }
-          for(var k in btcPurchaseMap){
-            var param = btcPurchaseMap[k]
-            var t = getTermBetween(term2,param[0],param[1])
+          for(let k in btcPurchaseMap){
+            let param = btcPurchaseMap[k]
+            let t = getTermBetween(term2,param[0],param[1])
             if(t){
               messageLineObj[k] = ''
               messageLineObj[k] = parseFloat(t)
             } 
           }
-  
         }
-
-      }else if (action == 'deposit'){
-        //console.log('DEPOSIT')
-        //console.log(match)
       }
     }
     if(typeof messageLineObj.boost == 'undefined'){
@@ -315,58 +231,67 @@ function base64Buffer(data,removeSpace){
        * so have to look for specific terms to do stuff
        * so find the first string (usually the beginning) then find the second string, and the value between the two is what we're lookin for
       */
-      var parsedSearchTerms = {
-
+      const parsedSearchTerms = {
         'BitcoinDeposit' : 'BTCDeposited',
-        // some emails have weird wording
         'BTCDepositedThe' : 'BTCdeposit'
-        // 
-        //'BitcoinDeposit' : 'BTCPending'
       }
-      for(var action in cashCardPostTerms){
-        var term = cashCardPostTerms[action]
-        var amount = false
+      for(let action in cashCardPostTerms){
+        let term = cashCardPostTerms[action]
+        let amount = false
         match = line.split(term)
         if(match.length > 1){
           // probably doesnt 'matter' to check the 'received' because sometimes it wont parse the amount properly..
           if(line.trim() === 'Your Bitcoin deposit completed' || line.trim() === 'Your Bitcoin deposit has been received' ){
             messageLineObj.where = 'Bitcoin'
-            //console.log(d.snippet)
+            if(typeof d.snippet == 'undefined'){
             // dont need this if d.snippet is present... but good example
             // refactor and normalize everything using maps
-            d.payload.parts.filter(function(prt){
-              if(typeof prt.body.data != 'undefined' && prt.body.data){
-                /* decode base64, encode raw html, parse html body, implode whitespace, use split to match terms
-                 * take inner and apply to 'amount' field if possible
-                 */
-                var parsed = base64Buffer(prt.body.data,true)
-                if(typeof parsed != 'undefined' && parsed){
-                  // THE MAGIC HAPPENS HERE
-            
-                  for(var sTerm in parsedSearchTerms){
-                    //console.log(line2)
-                    amount = getTermBetween(parsed,sTerm,parsedSearchTerms[sTerm]) 
-                    if(amount){
+              d.payload.parts.filter(function(prt){
+                if(typeof prt.body.data != 'undefined' && prt.body.data){
+                  /* decode base64, encode raw html, parse html body, implode whitespace, use split to match terms
+                   * take inner and apply to 'amount' field if possible
+                   */
+                  let parsed = base64Buffer(prt.body.data,true)
+                  if(typeof parsed != 'undefined' && parsed){
+                    for(let sTerm in parsedSearchTerms){
+                      amount = getTermBetween(parsed,sTerm,parsedSearchTerms[sTerm]) 
+                      if(amount){
+                          messageLineObj.amount = amount
+                          messageLineObj.action = sTerm
+                      }
+                    }
+                    if(!amount){
+                      let amount = getTermBetween(parsed,sTerm,'BTCPending')
+                      if(amount){
+                        messageLineObj.action = 'Pending BTC Deposit'
                         messageLineObj.amount = amount
-                        messageLineObj.action = sTerm
-                    }
-                  }
-                  if(!amount){
-                    var amount = getTermBetween(parsed,sTerm,'BTCPending')
-                    if(amount){
-                      messageLineObj.action = 'Pending BTC Deposit'
-                      messageLineObj.amount = amount
-                      messageLineObj.where = 'Square'
-                    }else{
-                      // check for 'BitcoinDeposit<number>BTCDepositedThe<number>BTCdeposit'
-                    }
-                  }      
-                }else{
-                  // check for term 'pending'
-                  
-                }          
+                        messageLineObj.where = 'Square'
+                      }
+                    }      
+                  }       
+                }
+              })
+            }else{
+              // redo this stuff... .
+              // DRY AF
+              let parsed = d.snippet
+              for(var sTerm in parsedSearchTerms){
+                //console.log(line2)
+                amount = getTermBetween(parsed,sTerm,parsedSearchTerms[sTerm]) 
+                if(amount){
+                    messageLineObj.amount = amount
+                    messageLineObj.action = sTerm
+                }
               }
-            })
+              if(!amount){
+                let amount = getTermBetween(parsed,sTerm,'BTCPending')
+                if(amount){
+                  messageLineObj.action = 'Pending BTC Deposit'
+                  messageLineObj.amount = amount
+                  messageLineObj.where = 'Square'
+                }
+              }     
+            }
           }else{
             /* checks for declined payment
              *
@@ -374,17 +299,15 @@ function base64Buffer(data,removeSpace){
             match = line.split('was declined')
             if(match.length > 1){
               // figure out amount
-              var amt = getTermBetween(match[0],'$','payment')
+              let amt = getTermBetween(match[0],'$','payment')
               if(amt){
                 messageLineObj.amount = parseFloat(amt)
               }
-              var at = match[0].split(' at ')
-              //console.log(at)
+              let at = match[0].split(' at ')
               if(at.length > 1){
                 messageLineObj.where = at[1].trim()
               }
             }else{
-              // look for 'was declined?'
               console.log("something else happened")
               console.log(line)
               console.log(match)
@@ -398,65 +321,83 @@ function base64Buffer(data,removeSpace){
           match = line
         }
       }
+      /* a more elegant approach .... slightly (less code sort of)
+       * probably a little slower but easier to manage the code.
+       * not sure if it would work with above but should.... 
+       */
+
       if(typeof messageLineObj.where == 'undefined'){
-        // check for 'sent you'
-        //console.log('****' + line + '\n\n')   
-        // re do.. :/
-        //console.log(match)
-        //console.log(messageLineObj)
-
+        const btcPurchaseMap = {
+            'btcAmount'         : [ 'BTC'  , 'BitcoinPurchase'],
+            'btcUsdValue'       : [ 'BTC$' , 'CompletedPurchased'],
+            'btcExchangeRate'   : [ 'BTCExchangeRate$','Fee$'],
+            'squareFee'         : [ 'Fee$','Total'],
+            'totalUsdAmt'       : [ 'Total$','B)SquareInc.']
+        }
+        const postTermsMap = {
+          'CashDeposit'         : [ 'Payment from $',' $','SquareInc'],
+          'BTCDepositPending'   : [ 'Bitcoin Deposit ',' BTC Pending ','SquareInc'],
+          'btcWithdrawal'       : [ ' Your withdrawal of ',' BTC','ExternalBTCWallet'],
+          'ConfirmationCode'    : [ 'Confirmation Code ',' Here is','SquareInc'],
+          'btcTransfersEnabled' : [ 'Bitcoin Transfers Enabled ',' Can now withdraw','SquareInc']
+        }
+        const postTermsInnerMap = {
+          'CashDeposit' : {
+            'id' : ['Destination Cash Identifier', ' If you']
+          }
+        }
+        for(let action in postTermsMap){
+          let terms = postTermsMap[action]
+          let chk = getTermBetween(d.snippet,terms[0],terms[1],'SquareInc')
+          if(chk){
+            messageLineObj.action = action
+            messageLineObj.amount = chk
+            messageLineObj.where = terms[2]
+            if(typeof postTermsInnerMap[action] != 'undefined'){
+              for(let action2 in postTermsInnerMap[action]){
+                terms = postTermsInnerMap[action2]
+                for(let iParam in terms){
+                  chk = getTermBetween(d.snippet,terms[0],terms[1])
+                  if(chk){
+                    messageLineObj[iParam] = chk
+                  }
+                }
+              }
+              chk = postTermsInnerMap[action]
+            }
+          }
+        }
       }
-
     }
     console.log(messageLineObj)
-    //if(match.length === 1){
-    /*
-    
-    */ 
-    //}
-    // have to get attachment parts
-    /*
-    {
-
-
-      id : <string>,
-      threadId: <string>,
-      labelIds : <array>,
-      snippet : <blob>,
-      historyId : <string/int>,
-      internalDate : <string/int - unix timestamp>
-
-
-    }*/
-
+    var end = new Date().getTime() /1000
+    handlerTime += end - start
+    console.log(handlerTime * 1000)
   }
-  var getPageOfMessages = function(r, result) {
+
+  let getPageOfMessages = function(r, result) {
     r.then(function(resp) {
       result = result.concat(resp.data.messages);
-      var nextPageToken = resp.nextPageToken;
+      const nextPageToken = resp.nextPageToken;
       if (typeof nextPageToken != 'undefined' && nextPageToken) {
-        console.log("getting next page")
-        request = gmail.users.messages.list({
+        let request = gmail.users.messages.list({
           'userId': userId,
           'pageToken': nextPageToken,
           'q': query
         });
         getPageOfMessages(r, result);
       } else {
-        console.log('dataset complete?')
-        // begin getting messages
-        console.log(result)
-        result.filter(function(m){
+        result.filter(function(m,i){
           getMessage(userId,m.id,msgHandler)
+         
         })
         return result
       }
     });
   };
-  var initialRequest = gmail.users.messages.list({
+  let initialRequest = gmail.users.messages.list({
     'userId': userId,
     'q': query
   });
   getPageOfMessages(initialRequest, []);
 }
-
