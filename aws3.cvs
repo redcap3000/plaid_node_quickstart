@@ -1,0 +1,2 @@
+Name,key,description,Enabled,usageplanIds
+MyFirstApiKey,apikey1234abcdefghij0123456789,An imported key,TRUE,c7y23b
