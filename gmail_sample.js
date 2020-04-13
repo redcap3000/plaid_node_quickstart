@@ -108,7 +108,7 @@ function base64Buffer(data,removeSpace){
 }
 
 handlerTime = 0
-
+feeTotal= 0
   function msgHandler(r,e){
     var start = new Date().getTime() / 1000
     const fieldFilter = [
@@ -133,6 +133,7 @@ handlerTime = 0
     
     const cashCardPreTerms = {
       'buy' : 'You purchased',
+      'stockBuy' : 'You bought',
       'sell' : 'You sold',
       'spend' : 'You spent',
       'withdrawal' : 'Your withdrawal of ',
@@ -220,6 +221,29 @@ handlerTime = 0
               messageLineObj[k] = parseFloat(t)
             } 
           }
+        }else if(action == 'stockBuy'){
+          var match2 = line.split('$')
+          if(match2){
+            var match3 = match2[1].split(' of   ')
+            if(match3){
+              messageLineObj.action = action
+              messageLineObj.usdAmount = parseFloat(match3[0])
+              match3 = match3[0].split(' of ')
+              if(match3.length > 1){
+                match3 = match3[1].split(' stock ')
+                if(match3.length > 1){
+                  messageLineObj.where = match3[0]
+                }
+
+              }
+            }
+         
+          }
+        }else{
+
+          console.log("UNCAUGHT")
+          console.log(action)
+          console.log(line)
         }
       }
     }
@@ -233,7 +257,7 @@ handlerTime = 0
       */
       const parsedSearchTerms = {
         'BitcoinDeposit' : 'BTCDeposited',
-        'BTCDepositedThe' : 'BTCdeposit'
+        'BTCDepositedThe' : 'BTCdeposit',
       }
       for(let action in cashCardPostTerms){
         let term = cashCardPostTerms[action]
@@ -276,7 +300,6 @@ handlerTime = 0
               // DRY AF
               let parsed = d.snippet
               for(var sTerm in parsedSearchTerms){
-                //console.log(line2)
                 amount = getTermBetween(parsed,sTerm,parsedSearchTerms[sTerm]) 
                 if(amount){
                     messageLineObj.amount = amount
@@ -316,7 +339,6 @@ handlerTime = 0
           if(typeof messageLineObj.action == 'undefined'){
             messageLineObj.action = action
           }
-          //console.log('Post\t'+action + '\t' + match[1])
         }else{
           match = line
         }
@@ -339,7 +361,7 @@ handlerTime = 0
           'BTCDepositPending'   : [ 'Bitcoin Deposit ',' BTC Pending ','SquareInc'],
           'btcWithdrawal'       : [ ' Your withdrawal of ',' BTC','ExternalBTCWallet'],
           'ConfirmationCode'    : [ 'Confirmation Code ',' Here is','SquareInc'],
-          'btcTransfersEnabled' : [ 'Bitcoin Transfers Enabled ',' Can now withdraw','SquareInc']
+          'btcTransfersEnabled' : [ 'Bitcoin Transfers Enabled ',' Can now withdraw','SquareInc'],
         }
         const postTermsInnerMap = {
           'CashDeposit' : {
@@ -370,9 +392,12 @@ handlerTime = 0
       }
     }
     console.log(messageLineObj)
+    if(typeof messageLineObj.squareFee != 'undefined'){
+      feeTotal +=  messageLineObj.squareFee
+    }
     var end = new Date().getTime() /1000
     handlerTime += end - start
-    console.log(handlerTime * 1000)
+    //console.log(handlerTime * 1000 + ' \t : FEE TOTAL : \t' + feeTotal)
   }
 
   let getPageOfMessages = function(r, result) {
